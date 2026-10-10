@@ -1,0 +1,2153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Digi Earth</title>
+<meta name="description" content="Animated ambience worlds with live and recorded nature sound.">
+<meta name="theme-color" content="#0f2a22">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Digi Earth">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: full-bleed living canvas world; world tabs up top, time-of-day + play + scenes docked at the bottom on phones; mixer becomes a right panel on wide screens */
+:root{
+  --bg:#dfe8de; --ink:#14211b; --ink-2:#4a5a51; --panel:rgba(244,248,242,.78); --line:rgba(20,33,27,.12);
+  --track:rgba(20,33,27,.16); --thumb:#ffffff; --accent:#2f6f3a; --on-accent:#f5faf3;
+  --halo:0 1px 14px rgba(255,255,255,.55); --shadow:0 12px 32px rgba(18,40,30,.16);
+  --f-display:"Young Serif", Georgia, "Times New Roman", serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#07100f; --ink:#eef2ee; --ink-2:#b2c0b8; --panel:rgba(9,14,18,.62); --line:rgba(231,239,232,.13);
+  --track:rgba(231,239,232,.2); --thumb:#eef2ee; --on-accent:#0a1012;
+  --halo:0 1px 18px rgba(0,0,0,.65); --shadow:0 12px 32px rgba(0,0,0,.4); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#07100f; --ink:#eef2ee; --ink-2:#b2c0b8; --panel:rgba(9,14,18,.62); --line:rgba(231,239,232,.13);
+  --track:rgba(231,239,232,.2); --thumb:#eef2ee; --on-accent:#0a1012;
+  --halo:0 1px 18px rgba(0,0,0,.65); --shadow:0 12px 32px rgba(0,0,0,.4); color-scheme:dark }
+
+[hidden]{display:none!important}
+html{box-sizing:border-box;height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;touch-action:manipulation}
+.app,.tbadge,.modal,.toast,.spot-tip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{overscroll-behavior:none}
+.search input{-webkit-user-select:text;user-select:text}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block}
+.fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .35s ease}
+.fade.on{opacity:1}
+.glass{background:var(--panel);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);border:1px solid var(--line)}
+
+.app{position:relative;z-index:1;height:100%;max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-inline:16px;padding-block:10px 14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-size:21px;text-shadow:var(--halo);background:none;border:0;padding:4px 6px 4px 2px;margin-left:-2px;border-radius:12px;cursor:pointer;color:var(--ink)}
+.brand:active .logo{transform:scale(.9)}
+.logo{width:30px;height:30px;flex:none;overflow:visible;transition:transform .2s;animation:glowCycle 9s linear infinite}
+.logo-land{animation:spinLand 14s linear infinite}
+.logo-cloud{animation:spinLand 8s linear infinite}
+.logo-orbit{transform-origin:12px 12px;animation:spin 7s linear infinite}
+@keyframes glowCycle{0%,100%{filter:drop-shadow(0 0 5px rgba(47,211,255,.6))}33%{filter:drop-shadow(0 0 6px rgba(124,255,154,.55))}66%{filter:drop-shadow(0 0 6px rgba(255,111,181,.55))}}
+@keyframes spinLand{to{transform:translateX(18px)}}
+.about{align-items:center;text-align:center;gap:8px;padding-top:26px}
+.about-x{position:absolute;top:14px;right:14px}
+.about-logo .logo{width:100px;height:100px;animation:glowBig 9s linear infinite}
+@keyframes glowBig{0%,100%{filter:drop-shadow(0 0 20px rgba(47,211,255,.55))}33%{filter:drop-shadow(0 0 22px rgba(124,255,154,.5))}66%{filter:drop-shadow(0 0 22px rgba(255,111,181,.5))}}
+.about-logo .logo-land{animation-duration:10s}
+.about-logo .logo-cloud{animation-duration:6s}
+.about h2{font-size:34px;margin:6px 0 0}
+.about-ver{margin:0;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.about-note{margin:6px 0 4px;max-width:42ch;font-size:14.5px;line-height:1.6;color:var(--ink-2)}
+.about-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;margin:4px 0}
+.about-stats div{padding:10px 4px;border-radius:14px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:2px}
+.about-stats b{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums}
+.about-stats span{font-size:11.5px;color:var(--ink-2)}
+.about-by{display:flex;flex-direction:column;align-items:center;gap:2px;margin:10px 0 8px}
+.about-by span{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.about-by strong{font-family:var(--f-display);font-weight:400;font-size:30px;letter-spacing:.04em;background:linear-gradient(90deg,var(--accent),var(--ink),var(--accent));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.about .help-done{width:100%}
+@media (prefers-reduced-motion: reduce){ .logo,.logo-land,.logo-cloud,.logo-orbit,.about-logo .logo,.about-by strong{animation:none} }
+.tools{position:relative;display:flex;align-items:center;gap:8px}
+
+.worlds{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px;border-radius:16px;max-width:560px}
+.wbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border:0;border-radius:12px;background:transparent;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--ink-2);transition:background .25s,color .25s}
+.wbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.wbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+
+.srcsw{display:flex;gap:2px;padding:3px;border-radius:999px}
+.sbtn{display:flex;align-items:center;gap:6px;height:38px;padding:0 10px;border:0;border-radius:999px;background:transparent;color:var(--ink-2);font-size:13px;font-weight:500;cursor:pointer;transition:background .25s,color .25s}
+.sbtn svg{width:20px;height:20px;flex:none}
+.sbtn span{display:none}
+.sbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.sbtn[aria-pressed="true"] span{display:inline}
+@media (max-width:420px){ .sbtn[aria-pressed="true"] span{display:none} }
+.brand{white-space:nowrap}
+.toast{position:fixed;z-index:20;left:50%;top:calc(env(safe-area-inset-top,0px) + 66px);transform:translate(-50%,-8px);max-width:calc(100vw - 32px);padding:9px 16px;border-radius:999px;font-size:13.5px;font-weight:500;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.tbadge{position:fixed;z-index:6;right:16px;top:44%;display:flex;flex-direction:row-reverse;align-items:center;border-radius:999px;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+.tb-btn{position:relative;flex:none;width:50px;height:50px;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:background .3s,color .3s}
+.tb-btn svg{width:22px;height:22px;position:relative}
+.tb-ring{display:none;position:absolute;inset:3px;border-radius:50%;background:conic-gradient(var(--on-accent) calc(var(--f,1)*1turn),rgba(255,255,255,.25) 0);-webkit-mask:radial-gradient(circle,transparent 64%,#000 66%);mask:radial-gradient(circle,transparent 64%,#000 66%)}
+.tbadge.active .tb-btn{background:var(--accent);color:var(--on-accent);box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent)}
+.tbadge.active .tb-ring{display:block}
+.tbadge.active .tb-btn svg{animation:breathe 3.5s ease-in-out infinite}
+.tbadge.active .tb-btn::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:ping 2.4s ease-out infinite;pointer-events:none}
+.tb-info{display:none;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 4px 10px 16px;min-width:0}
+.tbadge.open{border-radius:22px;align-items:flex-start}
+.tbadge.open .tb-info{display:flex}
+.tb-now,.tb-idle{display:flex;flex-direction:column;gap:1px}
+.tbadge:not(.active) .tb-now,.tbadge:not(.active) .tb-cancel{display:none}
+.tbadge.active .tb-idle{display:none}
+.tb-idle strong{font-size:14px}
+.tb-time{font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.tb-sub{font-size:12px;color:var(--ink-2)}
+.tb-opts{display:grid;grid-template-columns:repeat(2,auto);gap:6px;margin-top:8px}
+.tb-opts .tbtn{padding:8px 11px}
+.tb-cancel{margin-top:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:12.5px;font-weight:500;cursor:pointer}
+@media (min-width:960px){ .tbadge{right:414px;top:40%} }
+@media (prefers-reduced-motion: reduce){ .tbadge.active .tb-btn svg,.tbadge.active .tb-btn::after{animation:none} }
+.pip-title{display:none}
+.pip-mode .app,.pip-mode .tbadge,.pip-mode .toast,.pip-mode .modal,.pip-mode .spot{display:none!important}
+.pip-mode .pip-title{display:flex;flex-direction:column;position:fixed;left:12px;right:12px;bottom:10px;z-index:5;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.pip-title b{font-family:var(--f-display);font-weight:400;font-size:18px;line-height:1.15}
+.pip-title span{font-family:var(--f-mono);font-size:11px;opacity:.85}
+.credits summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2)}
+.credits p{margin:8px 0 0;font-size:12px;line-height:1.55;color:var(--ink-2)}
+.credits a{color:inherit}
+.hbtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:19px;line-height:1;cursor:pointer;color:var(--ink);padding:0}
+.help-body{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:4px;margin-inline:-4px;padding-inline:4px}
+.help-intro{margin:0 0 6px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+.hstep{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.hstep .hi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--accent)}
+.hstep .hi svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.hstep h3{margin:0 0 3px;font-size:15px;font-weight:600}
+.hstep p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.hstep b{color:var(--ink);font-weight:600}
+button.hstep{width:100%;background:transparent;border:0;border-top:1px solid var(--line);text-align:left;cursor:pointer;border-radius:0;font:inherit;color:inherit}
+button.hstep:hover,button.hstep:focus-visible{background:var(--panel)}
+.hstep h3{display:flex;align-items:baseline;gap:8px}
+.hstep .show{margin-left:auto;flex:none;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap}
+.spot{position:fixed;inset:0;z-index:30;pointer-events:none}
+.spot-hole{position:fixed;border-radius:16px;box-shadow:0 0 0 9999px rgba(4,10,8,.55);outline:2px solid var(--accent);outline-offset:2px;transition:all .35s cubic-bezier(.2,.8,.2,1)}
+.spot-hole::after{content:"";position:absolute;inset:-8px;border-radius:inherit;border:2px solid var(--accent);animation:ping 1.6s ease-out infinite}
+@keyframes ping{from{opacity:.9;transform:scale(.96)}to{opacity:0;transform:scale(1.12)}}
+.spot-tip{position:fixed;width:min(290px,calc(100vw - 32px));padding:14px;border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;pointer-events:auto;animation:pop .25s ease;background:var(--bg)}
+.spot-tip strong{font-size:15px}
+.spot-tip span{font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.spot-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.spot-acts button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:500;cursor:pointer}
+.spot-acts #spotOk{background:var(--accent);color:var(--on-accent);border-color:transparent}
+@media (prefers-reduced-motion: reduce){ .spot-hole::after{animation:none} .spot-hole{transition:none} }
+.install{flex:none;display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}
+.install div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.install strong{font-size:14px}
+.install span{font-size:12.5px;color:var(--ink-2)}
+.install button{flex:none;padding:9px 16px;border-radius:999px;border:0;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.help-done{flex:none;height:46px;border-radius:14px;border:0;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:15px;cursor:pointer}
+@media (max-width:380px){ .hbtn{width:34px;height:34px} .cbtn{width:38px;height:38px} .tools{gap:6px} }
+.cbtn{position:relative;width:42px;height:42px;border-radius:50%;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+.cring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#2f8f5b,#d9a23c,#e2733a,#c2477a,#6b5fd1,#2a83b8,#2f8f5b);animation:spin 6s linear infinite;-webkit-mask:radial-gradient(circle,transparent 55%,#000 57%);mask:radial-gradient(circle,transparent 55%,#000 57%)}
+.cdot{position:relative;width:22px;height:22px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--panel);animation:breathe 3s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{50%{transform:scale(.84)}}
+.pop{position:absolute;right:0;top:calc(100% + 10px);z-index:5;width:min(300px,calc(100vw - 32px));padding:14px;border-radius:18px;box-shadow:var(--shadow);animation:pop .22s ease}
+@keyframes pop{from{opacity:0;transform:translateY(-6px) scale(.97)}}
+.pop-t{margin:0 0 10px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.swb{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;font-size:11.5px;color:var(--ink-2)}
+.swb i{width:36px;height:36px;border-radius:50%;display:block;transition:transform .2s;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.swb[aria-pressed="true"] i{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--ink)}
+.swb[aria-pressed="true"]{color:var(--ink)}
+.swb:hover i{transform:scale(1.08)}
+
+.hero{margin-top:clamp(4px,3vh,40px);max-width:34ch;text-shadow:var(--halo)}
+.hero-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.hero-row .locbtn{margin-bottom:0;min-width:0}
+.pipbtn{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--ink);padding:0}
+.pipbtn svg{width:20px;height:20px}
+.pipbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.locbtn{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:7px 12px 7px 10px;margin-bottom:12px;border-radius:999px;font-weight:500;font-size:14px;cursor:pointer;text-shadow:none}
+.locbtn svg{width:18px;height:18px;flex:none;color:var(--accent)}
+.locbtn .dn{width:16px;height:16px;color:var(--ink-2)}
+.locbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(34px,9vw,66px);line-height:1;letter-spacing:-.01em;margin:.24em 0 .2em;text-wrap:balance}
+.meta{margin:0;font-family:var(--f-mono);font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.meta b{font-weight:500;color:var(--ink)}
+
+.dock{margin-top:auto;display:flex;flex-direction:column;gap:12px;min-width:0}
+.playrow{display:flex;align-items:center;gap:12px;max-width:560px}
+.play{position:relative;flex:none;width:68px;height:68px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow);transition:transform .2s}
+.play:active{transform:scale(.95)}
+.play svg{width:26px;height:26px;position:relative}
+.ring{position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--accent);opacity:.45;pointer-events:none}
+.phases{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:4px;border-radius:18px}
+.ph{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:0;border-radius:13px;background:transparent;cursor:pointer;font-size:11.5px;font-weight:500;color:var(--ink-2);min-width:0;transition:background .25s,color .25s}
+.ph svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ph[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px;scroll-snap-type:x proximity}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;scroll-snap-align:start;display:flex;align-items:center;gap:9px;min-height:40px;padding:6px 15px 6px 6px;border-radius:999px;font-weight:500;font-size:14px;cursor:pointer;transition:background .25s,color .25s}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.sw{width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+
+.sheet{border-radius:20px;box-shadow:var(--shadow);min-width:0}
+.sheet-h{width:100%;display:flex;align-items:center;gap:10px;padding:13px 16px;background:none;border:0;font-weight:600;font-size:15px;cursor:pointer;text-align:left}
+.sheet-h .mono{margin-left:auto;font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.chev{width:18px;height:18px;transition:transform .3s}
+.sheet.open .chev{transform:rotate(180deg)}
+.sheet-b{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s ease}
+.sheet.open .sheet-b{grid-template-rows:1fr}
+.sheet-in{overflow:hidden;min-height:0}
+.sheet-scroll{max-height:44vh;overflow-y:auto;padding:2px 16px 16px;display:flex;flex-direction:column;gap:12px}
+#rows{display:flex;flex-direction:column;gap:12px}
+.group{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:6px 0 -2px}
+.row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:10px;align-items:center}
+.row svg{width:22px;height:22px;grid-row:1 / span 2;color:var(--accent);fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.row label{font-size:14px;font-weight:500}
+.row .val{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.row input{grid-column:2 / 4}
+.timers{display:flex;gap:6px;flex-wrap:wrap}
+.tbtn{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:transparent;font-family:var(--f-mono);font-size:12px;cursor:pointer}
+.tbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.foot{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin:4px 0 0}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0;--p:50%;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(to right,var(--accent) var(--p),var(--track) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--thumb);border:2px solid var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:var(--track)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:6px;background:var(--accent)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--thumb);border:2px solid var(--accent)}
+
+.modal{position:fixed;inset:0;z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.backdrop{position:absolute;inset:0;background:rgba(4,10,8,.45);animation:fadein .25s}
+@keyframes fadein{from{opacity:0}}
+.panel{position:relative;width:100%;max-width:560px;max-height:86%;display:flex;flex-direction:column;gap:12px;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:var(--bg);color:var(--ink);box-shadow:var(--shadow);animation:up .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.panel-h{display:flex;align-items:center;justify-content:space-between}
+.panel h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:26px}
+.x{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer}
+.x svg{width:18px;height:18px}
+.search{display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}
+.search svg{width:18px;height:18px;color:var(--ink-2);flex:none}
+.search input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:var(--ink);font:16px var(--f-body);outline:none}
+.regions{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:0 16px;flex:none}
+.regions::-webkit-scrollbar{display:none}
+.rchip{flex:none;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.rchip span{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);margin-left:4px}
+.rchip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.rchip[aria-pressed="true"] span{color:inherit;opacity:.8}
+.live{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.live div{display:flex;flex-direction:column;gap:2px}
+.live strong{font-size:14px;font-weight:600}
+.live span{font-size:12.5px;color:var(--ink-2)}
+.switch{flex:none;width:48px;height:28px;border-radius:999px;border:0;background:var(--track);position:relative;cursor:pointer;transition:background .2s}
+.switch span{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--thumb);box-shadow:0 1px 4px rgba(0,0,0,.25);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"] span{transform:translateX(20px)}
+.loclist{overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-inline:-6px;min-height:0}
+.lgrp{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);padding:12px 6px 4px}
+.loc{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:2px 12px;align-items:center;text-align:left;padding:9px 6px;border:0;border-radius:14px;background:transparent;cursor:pointer}
+.loc:hover,.loc[aria-pressed="true"]{background:var(--panel)}
+.loc .lsw{grid-row:1 / span 2;width:44px;height:44px;border-radius:12px}
+.loc b{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loc .ltime{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.loc .lsub{grid-column:2 / 4;font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loc[aria-pressed="true"] b{color:var(--accent)}
+.empty{padding:16px 6px;color:var(--ink-2);font-size:14px}
+
+@media (min-width:640px){ .modal{align-items:center} .panel{border-radius:24px;max-height:80%} }
+@media (min-width:960px){
+  .app{padding-inline:32px;padding-block:18px 28px}
+  .worlds,.hero,.dock{max-width:calc(100% - 390px)}
+  .chips{margin-inline:0;padding-inline:0;flex-wrap:wrap;overflow:visible}
+  .sheet{position:absolute;right:32px;top:80px;bottom:28px;width:350px;display:flex;flex-direction:column}
+  .sheet-h{cursor:default}
+  .chev{display:none}
+  .sheet-b{grid-template-rows:1fr;flex:1;min-height:0}
+  .sheet-in{height:100%}
+  .sheet-scroll{max-height:none;height:100%}
+}
+@media (max-height:700px) and (max-width:959px){ .hero{margin-top:0} h1{font-size:32px} .locbtn{margin-bottom:8px} }
+@media (prefers-reduced-motion: reduce){ .sheet-b,.chip,.play,.fade,.wbtn,.ph{transition:none} .cring,.cdot,.pop,.panel,.backdrop{animation:none} }
+</style>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="fade" id="fade"></div>
+<div class="pip-title" id="pipTitle" aria-hidden="true"></div>
+<div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+<div class="tbadge glass" id="tbadge">
+  <button class="tb-btn" id="tbToggle" type="button" aria-expanded="false" aria-label="Sleep timer, off">
+    <span class="tb-ring"></span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 14.5A6.5 6.5 0 0 1 9.5 6a6.5 6.5 0 1 0 8.5 8.5z"/><path d="M15 4h3l-3 3.5h3"/></svg>
+  </button>
+  <div class="tb-info">
+    <div class="tb-now"><span class="tb-time" id="tbTime">0:00</span><span class="tb-sub">until sound fades</span></div>
+    <div class="tb-idle"><strong>Sleep timer</strong><span class="tb-sub">Fade the sound out after</span></div>
+    <div class="tb-opts" id="tbOpts">
+      <button class="tbtn" type="button" data-m="15">15 min</button><button class="tbtn" type="button" data-m="30">30 min</button>
+      <button class="tbtn" type="button" data-m="60">60 min</button><button class="tbtn" type="button" data-m="90">90 min</button>
+    </div>
+    <button class="tb-cancel" id="tbCancel" type="button">Turn off</button>
+  </div>
+</div>
+
+<div class="app">
+  <header class="top">
+    <button class="brand" id="brandBtn" type="button" aria-label="About Digi Earth" aria-haspopup="dialog">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+        <defs>
+          <clipPath id="gc1"><circle cx="12" cy="12" r="8.1"/></clipPath>
+          <radialGradient id="ocean1" cx="35%" cy="32%" r="75%">
+            <stop offset="0" stop-color="#7fe0ff"><animate attributeName="stop-color" values="#7fe0ff;#6ff0d8;#8fc8ff;#7fe0ff" dur="12s" repeatCount="indefinite"/></stop>
+            <stop offset=".55" stop-color="#1f78c8"><animate attributeName="stop-color" values="#1f78c8;#1a8fa8;#2a5fc8;#1f78c8" dur="12s" repeatCount="indefinite"/></stop>
+            <stop offset="1" stop-color="#0b2f66"/>
+          </radialGradient>
+          <linearGradient id="land1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9be27a"/><stop offset="1" stop-color="#2f8a4a"/>
+          </linearGradient>
+          <radialGradient id="shade1" cx="78%" cy="72%" r="70%">
+            <stop offset="0" stop-color="#020814" stop-opacity=".55"/><stop offset=".6" stop-color="#020814" stop-opacity=".12"/><stop offset="1" stop-color="#020814" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="rim1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2fd3ff"/><stop offset=".3" stop-color="#7cff9a"/><stop offset=".55" stop-color="#ffd25a"/><stop offset=".8" stop-color="#ff6fb5"/><stop offset="1" stop-color="#8a7bff"/>
+            <animateTransform attributeName="gradientTransform" type="rotate" from="0 .5 .5" to="360 .5 .5" dur="6s" repeatCount="indefinite"/>
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="8.1" fill="url(#ocean1)"/>
+        <g clip-path="url(#gc1)">
+          <g class="logo-land"><g fill="url(#land1)"><path d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/><path transform="translate(18 0)" d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/><path transform="translate(-18 0)" d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/></g>
+            <g fill="#e2c27a" opacity=".9"><path d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/><path transform="translate(18 0)" d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/><path transform="translate(-18 0)" d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/></g></g>
+          <g class="logo-cloud" fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity=".85"><path d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/><path transform="translate(18 0)" d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/><path transform="translate(-18 0)" d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/></g>
+          <circle cx="12" cy="12" r="8.1" fill="url(#shade1)"/>
+          <ellipse cx="9" cy="7.6" rx="3.2" ry="1.6" fill="#ffffff" opacity=".22" transform="rotate(-25 9 7.6)"/>
+        </g>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="url(#rim1)" stroke-width="1.6"/>
+        <g class="logo-orbit"><circle cx="12" cy="1.6" r="1.35" fill="#ffe08a"/><circle cx="12" cy="1.6" r="2.4" fill="#ffe08a" opacity=".25"/></g>
+      </svg>
+      <span>Digi Earth</span>
+    </button>
+    <div class="tools">
+      <div class="srcsw glass" id="srcsw" role="group" aria-label="Sound source">
+        <button class="sbtn" type="button" data-src="synth" aria-pressed="true" aria-label="Electronic sound" title="Electronic: generated live">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h3l2-6 3 12 3-9 2 6 2-3h5"/></svg>
+          <span>Electronic</span>
+        </button>
+        <button class="sbtn" type="button" data-src="real" aria-pressed="false" aria-label="Original recordings" title="Original: real field recordings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
+          <span>Original</span>
+        </button>
+      </div>
+      <button class="hbtn glass" id="helpBtn" type="button" aria-label="How to use Digi Earth" aria-haspopup="dialog">?</button>
+      <button class="cbtn" id="colorBtn" type="button" aria-label="Choose colour" aria-expanded="false" aria-controls="colorPop"><span class="cring"></span><span class="cdot"></span></button>
+      <div class="pop glass" id="colorPop" hidden>
+        <p class="pop-t">Colour</p>
+        <div class="swatches" id="swatches"></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="worlds glass" id="worlds" aria-label="World"></nav>
+
+  <section class="hero" aria-live="polite">
+    <div class="hero-row">
+    <button class="locbtn glass" id="locBtn" type="button" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>
+      <span id="locLbl">Choose a real place</span>
+      <svg class="dn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <button class="pipbtn glass" id="pipBtn" type="button" aria-label="Open mini player" title="Mini player" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="11.5" width="7" height="5.5" rx="1.2" fill="currentColor"/></svg>
+    </button>
+    </div>
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1 id="title">Temperate Woodland</h1>
+    <p class="meta" id="meta"></p>
+  </section>
+
+  <div class="dock">
+    <div class="playrow">
+      <button class="play" id="play" type="button" aria-label="Play ambience">
+        <span class="ring" id="ring"></span>
+        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+      </button>
+      <div class="phases glass" id="phases" role="group" aria-label="Time of day"></div>
+    </div>
+
+    <nav class="chips" id="chips" aria-label="Scene"></nav>
+
+    <section class="sheet glass" id="sheet">
+      <button class="sheet-h" id="sheetBtn" type="button" aria-expanded="false" aria-controls="sheetBody">
+        Sound mix
+        <span class="mono" id="activeCt"></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+      <div class="sheet-b" id="sheetBody">
+        <div class="sheet-in"><div class="sheet-scroll" id="mix"></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<audio id="bgAudio" playsinline hidden></audio>
+<video id="pipVideo" playsinline muted autopictureinpicture hidden></video>
+<div class="spot" id="spot" hidden>
+  <div class="spot-hole" id="spotHole"></div>
+  <div class="spot-tip glass" id="spotTip" role="status" aria-live="polite">
+    <strong id="spotT"></strong><span id="spotH"></span>
+    <div class="spot-acts"><button type="button" id="spotBack">Back to guide</button><button type="button" id="spotOk">Got it</button></div>
+  </div>
+</div>
+<div class="modal" id="aboutModal" hidden>
+  <div class="backdrop" id="aboutBack"></div>
+  <div class="panel about" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <button class="x about-x" id="aboutClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="about-logo"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+        <defs>
+          <clipPath id="gc2"><circle cx="12" cy="12" r="8.1"/></clipPath>
+          <radialGradient id="ocean2" cx="35%" cy="32%" r="75%">
+            <stop offset="0" stop-color="#7fe0ff"><animate attributeName="stop-color" values="#7fe0ff;#6ff0d8;#8fc8ff;#7fe0ff" dur="12s" repeatCount="indefinite"/></stop>
+            <stop offset=".55" stop-color="#1f78c8"><animate attributeName="stop-color" values="#1f78c8;#1a8fa8;#2a5fc8;#1f78c8" dur="12s" repeatCount="indefinite"/></stop>
+            <stop offset="1" stop-color="#0b2f66"/>
+          </radialGradient>
+          <linearGradient id="land2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9be27a"/><stop offset="1" stop-color="#2f8a4a"/>
+          </linearGradient>
+          <radialGradient id="shade2" cx="78%" cy="72%" r="70%">
+            <stop offset="0" stop-color="#020814" stop-opacity=".55"/><stop offset=".6" stop-color="#020814" stop-opacity=".12"/><stop offset="1" stop-color="#020814" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="rim2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2fd3ff"/><stop offset=".3" stop-color="#7cff9a"/><stop offset=".55" stop-color="#ffd25a"/><stop offset=".8" stop-color="#ff6fb5"/><stop offset="1" stop-color="#8a7bff"/>
+            <animateTransform attributeName="gradientTransform" type="rotate" from="0 .5 .5" to="360 .5 .5" dur="6s" repeatCount="indefinite"/>
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="8.1" fill="url(#ocean2)"/>
+        <g clip-path="url(#gc2)">
+          <g class="logo-land"><g fill="url(#land2)"><path d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/><path transform="translate(18 0)" d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/><path transform="translate(-18 0)" d="M3 8.5c1.6-1.6 3.4-1.2 4.4.2.8 1.1.4 2.6 1.9 3 1.3.4 2.2-1 3.6-.4 1.2.5.6 2.4-.8 3.1-1.3.7-3 .3-3.8 1.8-.6 1.2-2.4 1-3-.4-.5-1.2-.3-2.4-1.5-3.1C2.7 11.9 2.2 9.4 3 8.5zM14.5 5.6c1.2-.6 2.7-.2 3.4.8.6.9 0 2-.9 2.4-1 .4-2.3.3-2.8-.6-.4-.8-.6-2.1.3-2.6zM16.5 13.2c1-.4 2.4 0 2.7 1 .3 1.1-.6 2.6-1.8 2.8-1 .2-1.6-.8-1.6-1.8 0-.8.1-1.7.7-2z"/></g>
+            <g fill="#e2c27a" opacity=".9"><path d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/><path transform="translate(18 0)" d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/><path transform="translate(-18 0)" d="M5.2 13.4c.8-.5 1.9-.3 2.2.5.3.7-.2 1.5-1 1.7-.8.2-1.6-.2-1.7-.9 0-.5.1-1 .5-1.3z"/></g></g>
+          <g class="logo-cloud" fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity=".85"><path d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/><path transform="translate(18 0)" d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/><path transform="translate(-18 0)" d="M2 6.2c1.5-.6 3-.5 4.2.1M9 10.6c1.8-.5 3.2-.3 4.6.3M4 17c1.6-.4 3-.3 4.4.2M13.5 18.2c1.2-.4 2.4-.4 3.6 0"/></g>
+          <circle cx="12" cy="12" r="8.1" fill="url(#shade2)"/>
+          <ellipse cx="9" cy="7.6" rx="3.2" ry="1.6" fill="#ffffff" opacity=".22" transform="rotate(-25 9 7.6)"/>
+        </g>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="url(#rim2)" stroke-width="1.6"/>
+        <g class="logo-orbit"><circle cx="12" cy="1.6" r="1.35" fill="#ffe08a"/><circle cx="12" cy="1.6" r="2.4" fill="#ffe08a" opacity=".25"/></g>
+      </svg></div>
+    <h2 id="aboutTitle">Digi Earth</h2>
+    <p class="about-ver">Version 1.0 · ambient worlds</p>
+    <p class="about-note">A calm, living window onto the planet. Wander through animated forests, mountains, cities, shores and skies, set the hour from sunrise to night, and listen to ambience that is either generated live or recorded in the field. Use it to focus, unwind or drift off to sleep.</p>
+    <div class="about-stats" id="aboutStats"></div>
+    <div class="about-by"><span>Created by</span><strong>SSK-BLUM</strong></div>
+    <button class="help-done" id="aboutDone" type="button">Close</button>
+  </div>
+</div>
+<div class="modal" id="helpModal" hidden>
+  <div class="backdrop" id="helpBack"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="panel-h">
+      <h2 id="helpTitle">How to use</h2>
+      <button class="x" id="helpClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="help-body" id="helpBody"></div>
+    <div class="install" id="installRow" hidden><div><strong>Install Digi Earth</strong><span id="installTxt">Add it to your home screen and use it like an app.</span></div><button type="button" id="installBtn">Install</button></div>
+    <button class="help-done" id="helpDone" type="button">Got it</button>
+  </div>
+</div>
+<div class="modal" id="locModal" hidden>
+  <div class="backdrop" id="locBack"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="locTitle">
+    <div class="panel-h">
+      <h2 id="locTitle">Real places</h2>
+      <button class="x" id="locClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="regions" id="regions" role="group" aria-label="Region"></div>
+    <label class="search" for="locSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="locSearch" type="search" placeholder="Search place, country or sound" autocomplete="off"></label>
+    <div class="live">
+      <div><strong>Match local time</strong><span>Sunrise, day, sunset and night follow the clock there</span></div>
+      <button class="switch" id="liveSw" type="button" role="switch" aria-checked="true" aria-label="Match local time"><span></span></button>
+    </div>
+    <div class="loclist" id="locList"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Bridge to the Digi Earth Android app (absent in browsers)
+const NATIVE = window.DigiEarthNative || null;
+const nativePip = (() => { try { return !!(NATIVE && NATIVE.canPip()); } catch(e) { return false; } })();
+const store = { get(k){ try { return localStorage.getItem(k) } catch(e){ return null } }, set(k,v){ try { localStorage.setItem(k,v) } catch(e){} } };
+const rand = (a,b) => a + Math.random()*(b-a);
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+const mix = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const rgb = (c,a=1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = (a,b,c) => ((Math.imul(a, 73856093) ^ Math.imul(b, 19349663) ^ Math.imul(c, 83492791)) >>> 0) % 1000 / 1000;
+
+/* ---------- Icons ---------- */
+const ICON = {
+  wind:'<path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 12h14a3 3 0 1 1-3 3"/><path d="M3 16h6"/>',
+  rain:'<path d="M7 4l-2 5M12 4l-2 5M17 4l-2 5M9 13l-2 6M14 13l-2 6M19 13l-2 6"/>',
+  stream:'<path d="M2 9c2.5-2 4.5-2 7 0s4.5 2 7 0 4-2 6 0M2 15c2.5-2 4.5-2 7 0s4.5 2 7 0 4-2 6 0"/>',
+  birds:'<path d="M2 10c2-2.5 4-2.5 5 0 1-2.5 3-2.5 5 0M11 16c1.6-1.8 3.2-1.8 4.2 0 1-1.8 2.6-1.8 4.2 0"/>',
+  crickets:'<ellipse cx="12" cy="15" rx="4" ry="5"/><path d="M10 10L6 3M14 10l4-7M8 15H4M16 15h4M9 19l-3 3M15 19l3 3"/>',
+  frogs:'<path d="M4 16c0-4 3.6-7 8-7s8 3 8 7c0 2-2 3-8 3s-8-1-8-3z"/><circle cx="8.5" cy="8" r="2"/><circle cx="15.5" cy="8" r="2"/>',
+  owl:'<circle cx="9" cy="11" r="2.4"/><circle cx="15" cy="11" r="2.4"/><path d="M6 5l3 3M18 5l-3 3M6 8v6c0 4 3 7 6 7s6-3 6-7V8M11 15l1 1.5 1-1.5"/>',
+  thunder:'<path d="M13 2L6 13h5l-1 9 7-12h-5l1-8z"/>',
+  waves:'<path d="M2 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 10c1.5-4 6-5 8-2-2 0-3 1-2.5 3"/>',
+  gulls:'<path d="M2 11c3-3 5-3 7 0 2-3 4-3 7 0"/><path d="M13 17c1.5-1.6 2.8-1.6 3.8 0 1-1.6 2.3-1.6 3.8 0"/>',
+  traffic:'<path d="M4 15l1.6-5A2 2 0 0 1 7.5 8.5h9a2 2 0 0 1 1.9 1.5L20 15v3H4z"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="18" r="1.6"/>',
+  cars:'<path d="M3 13h11l3-3h4M3 17h18"/><circle cx="7" cy="9" r="1.4"/>',
+  train:'<rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 11h12M9 20l-2 2M15 20l2 2"/><circle cx="9.5" cy="14" r=".8"/><circle cx="14.5" cy="14" r=".8"/>',
+  bells:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0M12 3v2"/>',
+  hum:'<path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/><path d="M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0" opacity=".5"/><path d="M2 7c2-2 4-2 6 0s4 2 6 0 4-2 6 0" opacity=".5"/>',
+  burner:'<path d="M12 3c3 4 5 6 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 2 1.5 3 3 3-1-3-.5-6 0-8.5z"/>'
+};
+const ALL = Object.keys(ICON);
+const WORLDS = {
+  forest:{ name:'Forest', icon:'<path d="M12 3l5 7h-3l4 6H6l4-6H7z"/><path d="M12 16v5"/>',
+    sounds:[['wind','Wind in the canopy'],['rain','Rain on leaves'],['stream','Forest stream'],['birds','Songbirds'],['crickets','Crickets'],['frogs','Tree frogs'],['owl','Tawny owl'],['thunder','Distant thunder']] },
+  mountain:{ name:'Mountain', icon:'<path d="M2 20l7-12 4 6 3-4 6 10z"/><path d="M7.3 11l1.7 1.5 1.5-1.5"/>',
+    sounds:[['wind','Ridge wind'],['stream','Glacial creek'],['bells','Cowbells'],['birds','Alpine choughs'],['rain','Mountain rain'],['crickets','Meadow crickets'],['owl','Eagle owl'],['thunder','Rolling thunder']] },
+  city:{ name:'City', icon:'<path d="M3 21V9h5v12M8 21V4h7v17M15 21v-9h6v9M2 21h20"/><path d="M10.5 8h2M10.5 12h2M10.5 16h2"/>',
+    sounds:[['traffic','Traffic hum'],['cars','Passing cars'],['train','Metro train'],['rain','Rain on pavement'],['wind','Street wind'],['birds','Sparrows'],['crickets','Night crickets'],['thunder','Distant thunder']] },
+  shore:{ name:'Sea Shore', icon:'<circle cx="16" cy="8" r="3"/><path d="M2 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+    sounds:[['waves','Breaking waves'],['gulls','Seagulls'],['wind','Sea breeze'],['bells','Harbour bell'],['birds','Shore birds'],['rain','Rain at sea'],['crickets','Dune crickets'],['thunder','Storm offshore']] },
+  sky:{ name:'Sky', icon:'<path d="M7 18h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 9.6 4.2 4.2 0 0 0 7 18z"/><path d="M16 3.5v1.5M20.2 5.3l-1 1M22 9.5h-1.5"/>',
+    sounds:[['wind','High-altitude wind'],['hum','Celestial drone'],['birds','Swifts and larks'],['burner','Balloon burners'],['bells','Wind chimes'],['rain','Rain shafts'],['thunder','Thunderheads'],['crickets','Crickets far below']] }
+};
+const PHASES = [
+  { id:'sunrise', name:'Sunrise', icon:'<path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 4v4M9.5 6.5L12 4l2.5 2.5M4.5 13l1.5 1M19.5 13l-1.5 1"/>' },
+  { id:'day', name:'Day', icon:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' },
+  { id:'sunset', name:'Sunset', icon:'<path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 4v4M9.5 5.5L12 8l2.5-2.5M4.5 13l1.5 1M19.5 13l-1.5 1"/>' },
+  { id:'night', name:'Night', icon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>' }
+];
+
+/* ---------- Scenes ---------- */
+const SC = [
+ // Forest
+ { id:'temperate', world:'forest', short:'Temperate', name:'Temperate Woodland', code:'Köppen Cfb', stats:'14°C · 76% RH', desc:'oak, beech and silver fir',
+   trees:['round','round','pine'], fx:'pollen', fog:.35, sunA:1,
+   day:{ sky:['#8fc1e3','#dcebe0'], fog:'#d6e4d4', sun:'#fff2c2', accent:'#2f6f3a' }, night:{ sky:['#0a1322','#1b2a36'], fog:'#24343c', accent:'#9ed58b' },
+   cols:{ leaf:['#47753a','#5e8a3c','#36603a'], trunk:['#4a3b2c'] },
+   mix:{ day:{wind:.35,stream:.45,birds:.8,frogs:.1}, night:{wind:.25,stream:.4,crickets:.6,frogs:.3,owl:.6} } },
+ { id:'rainforest', world:'forest', short:'Rainforest', name:'Tropical Rainforest', code:'Köppen Af', stats:'27°C · 88% RH', desc:'kapok, strangler fig and palm',
+   trees:['round','round','palm'], fx:'pollen', fog:.5, sunA:.9,
+   day:{ sky:['#7fb8b0','#d8ead2'], fog:'#cfe3cf', sun:'#fff6d0', accent:'#127a4f' }, night:{ sky:['#06161a','#0f2a28'], fog:'#173230', accent:'#6fe0a8' },
+   cols:{ leaf:['#1f6b3d','#2f7f3a','#14553a'], trunk:['#3a2f22'] },
+   mix:{ day:{wind:.2,rain:.45,stream:.3,birds:.75,crickets:.2,frogs:.4,thunder:.25}, night:{wind:.15,rain:.4,stream:.3,birds:.05,crickets:.7,frogs:.85,owl:.2,thunder:.25} } },
+ { id:'autumn', world:'forest', short:'Autumn', name:'Autumn Deciduous', code:'Köppen Dfb', stats:'9°C · 70% RH', desc:'maple, birch and red oak',
+   trees:['round','round','round','pine'], fx:'leaves', fog:.3, sunA:1,
+   day:{ sky:['#a9c2d6','#f1dcc0'], fog:'#ead6bd', sun:'#ffe0a8', accent:'#b14e1c' }, night:{ sky:['#140f1c','#2c2026'], fog:'#33282a', accent:'#f0a35b' },
+   cols:{ leaf:['#c4571f','#d98a2b','#9b3a1e','#e0b43c'], trunk:['#4b3426'] },
+   mix:{ day:{wind:.6,rain:.1,stream:.25,birds:.4}, night:{wind:.5,rain:.05,stream:.2,crickets:.3,owl:.5} } },
+ { id:'boreal', world:'forest', short:'Taiga', name:'Boreal Taiga', code:'Köppen Dfc', stats:'−8°C · 82% RH', desc:'spruce, larch and pine under snow',
+   trees:['pine'], fx:'snow', fog:.4, sunA:.85, aurora:true, snowcap:true,
+   day:{ sky:['#9fb6cc','#e9eef2'], fog:'#e3e9ee', sun:'#f4f7ff', accent:'#2f6683' }, night:{ sky:['#030a17','#0d1d2c'], fog:'#1a2836', accent:'#7fe3c4' },
+   cols:{ leaf:['#2c4a42','#365548','#22403a'], trunk:['#3a3330'], snow:['#f0f4f8'] },
+   mix:{ day:{wind:.7,stream:.1,birds:.25}, night:{wind:.6,stream:.05,owl:.4} } },
+ { id:'monsoon', world:'forest', short:'Monsoon', name:'Monsoon Cloud Forest', code:'Köppen Cwb', stats:'19°C · 95% RH', desc:'tree fern, rhododendron and moss',
+   trees:['round','pine','palm'], fx:'none', fog:.75, sunA:.3, cloudy:true,
+   day:{ sky:['#8d9a9e','#c9d2cf'], fog:'#c3cdca', sun:'#e9ecea', accent:'#356a5c' }, night:{ sky:['#080d10','#161f22'], fog:'#1d2729', accent:'#8fd0bd' },
+   cols:{ leaf:['#3e6b52','#2f5c48','#4c7a58'], trunk:['#33302b'] },
+   mix:{ day:{wind:.4,rain:.85,stream:.5,birds:.2,frogs:.55,thunder:.6}, night:{wind:.35,rain:.8,stream:.45,crickets:.3,frogs:.9,thunder:.5} } },
+ { id:'bamboo', world:'forest', short:'Bamboo', name:'Bamboo Grove', code:'Köppen Cfa', stats:'17°C · 72% RH', desc:'moso bamboo, moss and stone lanterns',
+   trees:['bamboo','bamboo','bamboo','round'], fx:'none', fog:.4, sunA:.9,
+   day:{ sky:['#a6c9b4','#e4eedc'], fog:'#dbe8d6', sun:'#fff4d2', accent:'#3d7a3a' }, night:{ sky:['#071510','#14281e'], fog:'#1a2e24', accent:'#a8e08f' },
+   cols:{ leaf:['#6f9a3c','#5a8a36','#86a848'], trunk:['#4a5a2a'] },
+   mix:{ day:{wind:.5,stream:.35,birds:.55}, night:{wind:.4,stream:.3,crickets:.5,frogs:.2,owl:.25} } },
+ { id:'blossom', world:'forest', short:'Blossom', name:'Cherry Blossom Hills', code:'Köppen Cfa · spring', stats:'15°C · 64% RH', desc:'somei-yoshino cherry, cedar and bush warblers',
+   trees:['round','round','round','pine'], fx:'leaves', fog:.3, sunA:1,
+   day:{ sky:['#9ec3e6','#f3e4ea'], fog:'#efe2e8', sun:'#fff3dc', accent:'#b5476f' }, night:{ sky:['#100c1e','#2a1e30'], fog:'#2c2232', accent:'#f6a3c4' },
+   cols:{ leaf:['#f3b7cc','#e89ab6','#f8d2de','#3f6b48'], trunk:['#4a3530'] },
+   mix:{ day:{wind:.3,stream:.4,birds:.75}, night:{wind:.25,stream:.35,crickets:.3,owl:.3} } },
+ { id:'savanna', world:'forest', short:'Savanna', name:'Acacia Savanna', code:'Köppen Aw', stats:'26°C · 45% RH', desc:'umbrella thorn acacia, red oat grass and weaver birds',
+   trees:['acacia','acacia','shrub'], fx:'dust', fog:.18, sunA:1,
+   day:{ sky:['#7fb3dc','#f1e2bd'], fog:'#efe0bd', sun:'#fff0c0', accent:'#a3621c' }, night:{ sky:['#0a0c1a','#2a2026'], fog:'#2a2424', accent:'#f2b65a' },
+   cols:{ leaf:['#5f7a32','#6d8a3a','#4c6a2c'], trunk:['#3e3024'] },
+   mix:{ day:{wind:.5,birds:.55,crickets:.15,thunder:.1}, night:{wind:.35,crickets:.75,frogs:.25,owl:.3} } },
+ { id:'mediterranean', world:'forest', short:'Mediterranean', name:'Mediterranean Scrub', code:'Köppen Csa', stats:'22°C · 55% RH', desc:'cypress, olive, cork oak and cicadas',
+   trees:['cypress','round','cypress','shrub'], fx:'dust', fog:.22, sunA:1,
+   day:{ sky:['#7ab4e6','#efe8d6'], fog:'#ebe4d2', sun:'#fff3c8', accent:'#5a6f2a' }, night:{ sky:['#08101e','#22223a'], fog:'#24263a', accent:'#c8d88a' },
+   cols:{ leaf:['#556b2f','#6b7d42','#7d8a5a'], trunk:['#4a3d2c'] },
+   mix:{ day:{wind:.4,birds:.4,crickets:.45}, night:{wind:.3,crickets:.7,owl:.35} } },
+ // Mountain
+ { id:'alpine', world:'mountain', short:'Alpine', name:'Alpine Meadow', code:'2,100 m · 79 kPa', stats:'11°C · wildflower meadow', desc:'larch, gentian and edelweiss',
+   trees:['pine'], fx:'pollen', fog:.3, sunA:1, snow:.36,
+   day:{ sky:['#6fa8dc','#dcecf5'], fog:'#dfe9f0', sun:'#fff4cf', accent:'#2f6c8f' }, night:{ sky:['#050c1b','#14223a'], fog:'#1c2a3d', accent:'#8fc8ee' },
+   cols:{ rock:['#8193a8','#64788c','#4d6150'], leaf:['#2f5a3a','#3c6a40','#27503a'], trunk:['#3b3128'], ground:['#5f8a46'], snow:['#f4f7fb'] },
+   mix:{ day:{wind:.45,stream:.55,birds:.45,bells:.5,crickets:.15}, night:{wind:.4,stream:.5,bells:.1,owl:.35,crickets:.45} } },
+ { id:'himalaya', world:'mountain', short:'Himalaya', name:'Himalayan Range', code:'5,364 m · 52 kPa', stats:'−4°C · thin, dry air', desc:'prayer flags, yaks and lammergeiers',
+   trees:[], fx:'snow', fog:.22, sunA:1, snow:.68,
+   day:{ sky:['#3f7fc4','#cfe3f2'], fog:'#d9e6f0', sun:'#ffffff', accent:'#2a5f9a' }, night:{ sky:['#02060f','#0b1628'], fog:'#121d2c', accent:'#a9c8f0' },
+   cols:{ rock:['#9aa7b6','#748293','#58606a'], leaf:['#4a4a40'], trunk:['#3b3128'], ground:['#6b6560'], snow:['#ffffff'] },
+   mix:{ day:{wind:.85,stream:.15,birds:.2,bells:.3}, night:{wind:.75,stream:.1,owl:.2} } },
+ { id:'canyon', world:'mountain', short:'Canyon', name:'Red Rock Canyon', code:'1,600 m · 84 kPa', stats:'24°C · 18% RH', desc:'sandstone mesas, ravens and desert wind',
+   trees:['shrub'], fx:'dust', fog:.15, sunA:1, snow:0, mesa:true,
+   day:{ sky:['#7fb2dc','#f3dcc0'], fog:'#f0d9bf', sun:'#fff0c8', accent:'#a4522a' }, night:{ sky:['#0b0a1a','#2a1d22'], fog:'#2a1f22', accent:'#f0a070' },
+   cols:{ rock:['#d79a6c','#b9693f','#8e4627'], leaf:['#6f7a46','#59663a'], trunk:['#4a3a2a'], ground:['#a8603a'], snow:['#ffffff'] },
+   mix:{ day:{wind:.6,birds:.25,crickets:.1}, night:{wind:.45,crickets:.6,owl:.3} } },
+ { id:'volcanic', world:'mountain', short:'Volcanic', name:'Volcanic Highlands', code:'600 m · 94 kPa', stats:'4°C · 80% RH', desc:'lava fields, rhyolite hills and hot springs',
+   trees:[], fx:'none', fog:.4, sunA:.8, snow:.22, aurora:true, soft:true,
+   day:{ sky:['#8fa6bc','#e2e8ec'], fog:'#dde3e8', sun:'#f6f4ea', accent:'#3f6a6a' }, night:{ sky:['#02070f','#0b1826'], fog:'#141e2a', accent:'#7fe3c4' },
+   cols:{ rock:['#6a6a74','#4a4a52','#2f3530'], leaf:['#4f6b3a'], trunk:['#3b3128'], ground:['#4f6b3a'], snow:['#f4f7fb'] },
+   mix:{ day:{wind:.75,stream:.5,birds:.15}, night:{wind:.65,stream:.45} } },
+ { id:'karst', world:'mountain', short:'Karst', name:'Misty Karst Peaks', code:'1,000 m · 90 kPa', stats:'18°C · 90% RH', desc:'sandstone pillars, pines and gibbons',
+   trees:['pine','round'], fx:'none', fog:.75, sunA:.7, karst:true, snow:0, cloudy:true,
+   day:{ sky:['#9fb4b8','#dfe6e2'], fog:'#d4ddda', sun:'#f4f2e8', accent:'#3b6a5a' }, night:{ sky:['#060c10','#16201f'], fog:'#1c2626', accent:'#9fd8c0' },
+   cols:{ rock:['#7e8c88','#5f706a','#435249'], leaf:['#2f5a3e','#3c6a48'], trunk:['#3b3128'], ground:['#3f5e40'], snow:['#ffffff'] },
+   mix:{ day:{wind:.35,stream:.45,birds:.55,rain:.2}, night:{wind:.3,stream:.4,crickets:.5,owl:.3,rain:.15} } },
+ { id:'dunes', world:'mountain', short:'Dunes', name:'Desert Dune Sea', code:'Sea level · 101 kPa', stats:'35°C · 20% RH', desc:'star dunes, sand grouse and a hot wind',
+   trees:[], fx:'dust', fog:.12, sunA:1, dunes:true, snow:0,
+   day:{ sky:['#7fb6e0','#f5e6c8'], fog:'#f3e2c2', sun:'#fff3c4', accent:'#b06a22' }, night:{ sky:['#060a18','#24203a'], fog:'#2a2430', accent:'#f2b65a' },
+   cols:{ rock:['#efcf9c','#e0b47a','#c99558'], leaf:['#8a8a5a'], trunk:['#4a3a2a'], ground:['#d4a464'], snow:['#ffffff'] },
+   mix:{ day:{wind:.75,birds:.1}, night:{wind:.45,crickets:.4,owl:.2} } },
+ // City
+ { id:'neon', world:'city', short:'Neon Rain', name:'Neon Rain City', code:'62 dB(A) · 14 million people', stats:'16°C · light rain', desc:'crosswalk chimes, scooters and late trains',
+   types:['box','tower','box','box'], fx:'none', fog:.35, sunA:.5, cloudy:true, signs:true,
+   day:{ sky:['#8c9aac','#c9d0d8'], fog:'#c3cad2', sun:'#f0f2f4', accent:'#3b56b8' }, night:{ sky:['#0a0718','#24143a'], fog:'#2a1a3e', accent:'#ff6fb5' },
+   cols:{ build:['#6b7488','#4b5368','#2c3242'], road:['#2a2d35'], glass:['#9fb3c8'], neon:['#ff4fa3','#3ee7ff','#ffd23f','#9b7bff'] },
+   mix:{ day:{traffic:.55,cars:.5,train:.3,rain:.45,wind:.15,birds:.2,thunder:.1}, night:{traffic:.4,cars:.35,train:.35,rain:.55,wind:.15,crickets:.1,thunder:.15} } },
+ { id:'oldtown', world:'city', short:'Old Town', name:'Old Town', code:'48 dB(A) · cobblestone', stats:'12°C · church bells on the hour', desc:'trams, pigeons and clock towers',
+   types:['pitched','pitched','spire','pitched'], fx:'none', fog:.3, sunA:1,
+   day:{ sky:['#8fb6dc','#ecdcc6'], fog:'#eadfce', sun:'#fff0cc', accent:'#8a4b2a' }, night:{ sky:['#0c1020','#2a2230'], fog:'#2c2630', accent:'#f2b36b' },
+   cols:{ build:['#cfae8c','#b08263','#86604a'], road:['#4a4440'], glass:['#e0d2b8'], neon:['#ffcf7a'] },
+   mix:{ day:{traffic:.2,cars:.15,train:.1,wind:.25,birds:.6}, night:{traffic:.12,cars:.1,train:.1,wind:.2,crickets:.35} } },
+ { id:'desertcity', world:'city', short:'Desert City', name:'Desert Metropolis', code:'55 dB(A) · Gulf coast', stats:'31°C · 55% RH · sea breeze', desc:'glass towers, domes and the Gulf breeze',
+   types:['tower','dome','tower','box'], fx:'dust', fog:.3, sunA:1,
+   day:{ sky:['#9cc3e0','#f1e2c8'], fog:'#efe0c6', sun:'#fff1c4', accent:'#1f7f86' }, night:{ sky:['#08101e','#2a2236'], fog:'#2c2530', accent:'#6fd6d0' },
+   cols:{ build:['#d8c6a6','#b39c7c','#87745c'], road:['#3a3a3c'], glass:['#a8d4dc'], neon:['#ffd58a','#7fe7ff'] },
+   mix:{ day:{traffic:.45,cars:.45,train:.2,wind:.4,birds:.25}, night:{traffic:.35,cars:.35,train:.25,wind:.3,crickets:.35} } },
+ { id:'wintercity', world:'city', short:'Winter', name:'Snowy Winter City', code:'45 dB(A) · snow muffles sound', stats:'−3°C · 78% RH', desc:'snowploughs, subway grates and quiet avenues',
+   types:['box','tower','box','pitched'], fx:'snow', fog:.35, sunA:.85,
+   day:{ sky:['#a8b8c8','#e4e8ec'], fog:'#dfe4ea', sun:'#f6f6f2', accent:'#3b5a7a' }, night:{ sky:['#060a16','#1c2232'], fog:'#22283a', accent:'#9cc6ee' },
+   cols:{ build:['#8a8f98','#6a707a','#454b55'], road:['#d6dbe0'], glass:['#b8c8d8'], neon:['#ffcf8a','#ff7a6b'] },
+   mix:{ day:{traffic:.3,cars:.25,train:.25,wind:.45,birds:.1}, night:{traffic:.2,cars:.15,train:.25,wind:.4} } },
+ { id:'monsooncity', world:'city', short:'Monsoon City', name:'Monsoon Megacity', code:'70 dB(A) · 21 million people', stats:'28°C · 92% RH · heavy rain', desc:'rickshaws, local trains and rooftop downpours',
+   types:['box','box','tower','box'], fx:'none', fog:.45, sunA:.35, cloudy:true, signs:true,
+   day:{ sky:['#7f8e8c','#bcc6c2'], fog:'#b8c2be', sun:'#e6eae6', accent:'#2f6f6a' }, night:{ sky:['#070b0c','#1e2624'], fog:'#222a28', accent:'#ffb84d' },
+   cols:{ build:['#7d8a86','#5d6b66','#3a4542'], road:['#2f3432'], glass:['#9fb3b0'], neon:['#ffb84d','#4dd2ff','#ff5f8a'] },
+   mix:{ day:{traffic:.5,cars:.45,train:.3,rain:.85,wind:.3,thunder:.45}, night:{traffic:.35,cars:.3,train:.3,rain:.8,wind:.25,crickets:.2,thunder:.45} } },
+ // Shore
+ { id:'lagoon', world:'shore', short:'Lagoon', name:'Tropical Lagoon', code:'Swell 0.6 m · 29°C water', stats:'30°C · 74% RH', desc:'palm fronds, reef herons and soft surf',
+   near:'palm', far:'island', fx:'none', fog:.25, sunA:1,
+   day:{ sky:['#5fb2e6','#e0f3f5'], fog:'#e6f4f2', sun:'#fff6d0', accent:'#0f8a9a' }, night:{ sky:['#030c1a','#0e2338'], fog:'#14283a', accent:'#5fe0e8' },
+   cols:{ water:['#8ed8e0','#36b3c4','#138aa0'], sand:['#f2dcae','#dcc08a'], leaf:['#2f7a3a','#3d8a40'], trunk:['#6b5236'], rock:['#5a5550','#45403b'] },
+   mix:{ day:{waves:.7,gulls:.35,wind:.3,birds:.3}, night:{waves:.6,wind:.2,crickets:.5,bells:.1} } },
+ { id:'cliffs', world:'shore', short:'Cliffs', name:'Atlantic Cliffs', code:'Swell 2.4 m · 14°C water', stats:'13°C · 85% RH', desc:'granite cliffs, gannets and heavy surf',
+   near:'cliff', far:'headland', fx:'none', fog:.35, sunA:.9,
+   day:{ sky:['#8aa6bd','#dde5ea'], fog:'#d6dfe5', sun:'#f6f4ea', accent:'#2c5d78' }, night:{ sky:['#050b14','#16222e'], fog:'#1a2632', accent:'#9cc6dc' },
+   cols:{ water:['#8aa8b4','#4c6f80','#2a4c5a'], sand:['#8c8476','#6b6458'], rock:['#4f4d48','#36352f'], leaf:['#5c6e4a'], trunk:['#3a332b'] },
+   mix:{ day:{waves:.9,gulls:.55,wind:.6,rain:.15,bells:.25}, night:{waves:.85,wind:.55,bells:.3,gulls:.05} } },
+ { id:'gulf', world:'shore', short:'Gulf', name:'Arabian Gulf Shore', code:'Swell 0.4 m · 30°C water', stats:'33°C · 60% RH', desc:'dhows, terns and a far skyline',
+   near:'dhow', far:'skyline', fx:'none', fog:.3, sunA:1,
+   day:{ sky:['#8fc4e2','#f3e6cc'], fog:'#f0e4cc', sun:'#fff2c6', accent:'#1f7f86' }, night:{ sky:['#060e1c','#24203a'], fog:'#252438', accent:'#6fd6d0' },
+   cols:{ water:['#a6dcd4','#4fb0ad','#23858c'], sand:['#ecd5a6','#d4b886'], rock:['#9a8a70','#7a6c56'], leaf:['#5d7a3a'], trunk:['#4a3424'], build:['#cbd6dc','#a7b4bc','#8a979e'], neon:['#ffd58a'] },
+   mix:{ day:{waves:.45,gulls:.4,wind:.45,birds:.2,bells:.15}, night:{waves:.4,wind:.3,crickets:.4} } },
+ { id:'cloudsea', world:'sky', short:'Cloud Sea', name:'Above the Clouds', code:'3,000 m · 70 kPa', stats:'2°C · calm jet stream', desc:'a sea of stratocumulus, swifts and distant summits',
+   ground:'peaks', clouds:true, fx:'none', fog:.2, sunA:1,
+   day:{ sky:['#4f8fd6','#d6e6f4'], fog:'#e4ecf4', sun:'#fffbe8', accent:'#2f62a8' }, night:{ sky:['#020714','#0d1a30'], fog:'#16223a', accent:'#9cc0f0' },
+   cols:{ cloud:['#ffffff','#eef2f7','#c9d4e2'], rock:['#6f7f94'], snow:['#ffffff'], leaf:['#3a4a3a'], trunk:['#3a3330'] },
+   mix:{ day:{wind:.55,hum:.35,birds:.3,bells:.15}, night:{wind:.45,hum:.5,bells:.1} } },
+ { id:'balloons', world:'sky', short:'Balloons', name:'Balloon Valley', code:'900 m · 91 kPa', stats:'12°C · still dawn air', desc:'hot-air balloons drifting over fairy chimneys',
+   ground:'hills', balloons:true, fx:'none', fog:.25, sunA:1,
+   day:{ sky:['#8fbbe0','#f4e4d0'], fog:'#f0e2d0', sun:'#fff0c8', accent:'#c0502a' }, night:{ sky:['#0a0c1e','#2a2032'], fog:'#2a2434', accent:'#ffab6b' },
+   cols:{ rock:['#d9b48a','#c49870','#9c7452'], balloon:['#e0483c','#f2c14e','#2f7fbf','#3fa66a','#ece6d4','#8a4fbf'], cloud:['#ffffff','#eef2f7','#c9d4e2'], leaf:['#7a8a4a'], trunk:['#4a3a2a'] },
+   mix:{ day:{wind:.3,burner:.55,birds:.4,hum:.15}, night:{wind:.2,crickets:.5,hum:.3,burner:.15} } },
+ { id:'stormsky', world:'sky', short:'Storm', name:'Supercell Storm', code:'Cloud tops 12 km', stats:'24°C · CAPE 3,000 J/kg', desc:'anvil clouds, rain shafts and lightning',
+   ground:'plains', storm:true, fx:'none', fog:.3, sunA:.35, cloudy:true,
+   day:{ sky:['#5f6f80','#a8b2ba'], fog:'#9aa5ae', sun:'#e8ecf0', accent:'#4a5f7a' }, night:{ sky:['#05080e','#141a22'], fog:'#181f28', accent:'#a8c0e0' },
+   cols:{ cloud:['#c8ced6','#8e97a2','#4f5862'], rock:['#4a5a3e'], leaf:['#3a4a30'], trunk:['#30281e'] },
+   mix:{ day:{wind:.6,rain:.6,thunder:.8,hum:.1}, night:{wind:.55,rain:.6,thunder:.85,hum:.1} } },
+ { id:'milkyway', world:'sky', short:'Milky Way', name:'Milky Way Desert', code:'Bortle 1 · darkest sky', stats:'18°C · 25% RH', desc:'the galactic core, meteors and silent dunes',
+   ground:'dunes', milky:true, fx:'none', fog:.12, sunA:1,
+   day:{ sky:['#6fa6dc','#f2e4c8'], fog:'#efe0c4', sun:'#fff3c8', accent:'#6a4fb0' }, night:{ sky:['#01030a','#0a0c1e'], fog:'#0e1020', accent:'#b8a8ff' },
+   cols:{ rock:['#c99a62','#a87a48'], leaf:['#5a6a3a'], trunk:['#3a2e22'], cloud:['#ffffff','#eef2f7','#c9d4e2'] },
+   mix:{ day:{wind:.35,hum:.3,birds:.1}, night:{wind:.2,hum:.55,crickets:.45,bells:.15} } },
+ { id:'aurorasky', world:'sky', short:'Aurora', name:'Aurora Skies', code:'Kp 6 · geomagnetic storm', stats:'−12°C · 70% RH', desc:'curtains of aurora over a frozen lake',
+   ground:'lake', aurora:true, fx:'none', fog:.25, sunA:.85,
+   day:{ sky:['#8fb0d0','#e8eef4'], fog:'#e2e8ee', sun:'#f6f8ff', accent:'#2f7a8a' }, night:{ sky:['#010612','#081a26'], fog:'#0f1c28', accent:'#7fe3c4' },
+   cols:{ snow:['#eef3f7'], water:['#5f8aa8'], leaf:['#1f3a34'], trunk:['#2a2a28'], rock:['#8a9aa8'], cloud:['#ffffff','#eef2f7','#c9d4e2'] },
+   mix:{ day:{wind:.5,hum:.3,bells:.1}, night:{wind:.35,hum:.6,bells:.2} } },
+ { id:'arctic', world:'shore', short:'Arctic', name:'Arctic Ice Coast', code:'Swell 0.8 m · −1°C water', stats:'−6°C · 85% RH', desc:'icebergs, eiders and creaking sea ice',
+   near:'ice', far:'iceberg', fx:'snow', fog:.35, sunA:.8, aurora:true,
+   day:{ sky:['#8fb0cc','#e6eef4'], fog:'#e0e8ee', sun:'#f6f8ff', accent:'#2f6a8f' }, night:{ sky:['#02060f','#0b1828'], fog:'#141e2c', accent:'#7fe3c4' },
+   cols:{ water:['#9fc4d4','#4f7f98','#284d63'], sand:['#e8eef2','#b8c6cf'], rock:['#5a6670','#3e4a54'], leaf:['#4a5a4a'], trunk:['#3a3330'] },
+   mix:{ day:{waves:.45,wind:.75,gulls:.2,bells:.1}, night:{waves:.4,wind:.7} } },
+ { id:'mangrove', world:'shore', short:'Mangrove', name:'Mangrove Lagoon', code:'Tide 1.1 m · 28°C water', stats:'31°C · 70% RH', desc:'grey mangroves, herons and fiddler crabs',
+   near:'mangrove', far:'island', fx:'none', fog:.25, sunA:1,
+   day:{ sky:['#8cc2e2','#eeeedc'], fog:'#e8ead8', sun:'#fff3c8', accent:'#3f7a4a' }, night:{ sky:['#050c18','#1a2430'], fog:'#1e2830', accent:'#9fdcb0' },
+   cols:{ water:['#a2ccc0','#5f9a8a','#36705f'], sand:['#c9b48a','#a8946c'], rock:['#6a5a4a','#4a3e32'], leaf:['#3f6b3a','#4f7a3f'], trunk:['#4a3a2a'] },
+   mix:{ day:{waves:.25,birds:.55,wind:.3,gulls:.15}, night:{waves:.2,crickets:.6,wind:.2} } },
+ { id:'medcove', world:'shore', short:'Med Cove', name:'Mediterranean Cove', code:'Swell 0.5 m · 24°C water', stats:'25°C · 60% RH', desc:'limestone cliffs, fishing boats and cicadas',
+   near:'cliff', far:'headland', fx:'none', fog:.22, sunA:1,
+   day:{ sky:['#64aee6','#eef2ea'], fog:'#e8eee6', sun:'#fff4cc', accent:'#1f6a9a' }, night:{ sky:['#040c1c','#18203a'], fog:'#1c2438', accent:'#7cc8ee' },
+   cols:{ water:['#7fd0d8','#2a9bb5','#14608a'], sand:['#e8d6b4','#cbb38c'], rock:['#cdb08a','#a08262'], leaf:['#6b7a3a'], trunk:['#4a3a2a'] },
+   mix:{ day:{waves:.6,gulls:.4,wind:.35,crickets:.3,bells:.2}, night:{waves:.55,wind:.25,crickets:.55,bells:.2} } },
+];
+
+/* ---------- Real places (rise/set: approximate local hours for October) ---------- */
+const L = (id,world,scene,name,place,coord,tz,rise,set,about,tweak={}) => ({ id,world,scene,name,place,coord,tz,rise,set,about,tweak });
+const LOCS = [
+ L('amazon','forest','rainforest','Amazon Rainforest','Manaus, Brazil','3.1°S 60.0°W','America/Manaus',5.9,18,'howler monkeys, scarlet macaws, poison dart frogs',{frogs:.1,birds:.1}),
+ L('daintree','forest','rainforest','Daintree Rainforest','Queensland, Australia','16.2°S 145.4°E','Australia/Brisbane',5.8,18.2,'cassowaries, tree kangaroos, green tree frogs',{stream:.15}),
+ L('danum','forest','rainforest','Danum Valley','Sabah, Borneo','4.9°N 117.8°E','Asia/Kuching',6,18,'orangutans, rhinoceros hornbills, gibbons',{birds:.15}),
+ L('blackforest','forest','temperate','Black Forest','Baden-Württemberg, Germany','48.0°N 8.2°E','Europe/Berlin',7.7,18.5,'red deer, black woodpeckers, tawny owls',{owl:.1}),
+ L('bialowieza','forest','temperate','Białowieża Forest','Podlasie, Poland','52.7°N 23.9°E','Europe/Warsaw',6.6,17.4,'European bison, grey wolves, nightingales',{stream:-.15}),
+ L('smoky','forest','autumn','Great Smoky Mountains','Tennessee, USA','35.6°N 83.5°W','America/New_York',7.6,19,'black bears, wild turkeys, barred owls',{stream:.2}),
+ L('lapland','forest','boreal','Lapland Taiga','Sodankylä, Finland','67.4°N 26.6°E','Europe/Helsinki',8,17.6,'reindeer, Siberian jays, great grey owls'),
+ L('yakushima','forest','monsoon','Yakushima','Kagoshima, Japan','30.3°N 130.5°E','Asia/Tokyo',6.4,17.9,'Yakushima macaques, sika deer, white-eyes',{thunder:-.3,stream:.2}),
+ L('monteverde','forest','monsoon','Monteverde Cloud Forest','Puntarenas, Costa Rica','10.3°N 84.8°W','America/Costa_Rica',5.6,17.5,'quetzals, howler monkeys, glass frogs',{thunder:-.25,birds:.25}),
+ L('arashiyama','forest','bamboo','Arashiyama Bamboo Grove','Kyoto, Japan','35.0°N 135.7°E','Asia/Tokyo',5.95,17.5,'bamboo creak, bush warblers and the Katsura river',{stream:.1}),
+ L('yoshino','forest','blossom','Mount Yoshino','Nara, Japan','34.4°N 135.9°E','Asia/Tokyo',5.95,17.5,'30,000 cherry trees, cedars and nightingales'),
+ L('serengeti','forest','savanna','Serengeti','Mara, Tanzania','2.3°S 34.8°E','Africa/Dar_es_Salaam',6.5,18.6,'acacias, weaver birds and cicada nights'),
+ L('luberon','forest','mediterranean','Luberon Hills','Provence, France','43.8°N 5.3°E','Europe/Paris',7.75,19.1,'cypress, lavender fields and cicadas'),
+ L('zermatt','mountain','alpine','Matterhorn','Zermatt, Switzerland','46.0°N 7.7°E','Europe/Zurich',7.6,18.9,'marmots, alpine choughs and cowbells',{bells:.15}),
+ L('banff','mountain','alpine','Banff','Alberta, Canada','51.2°N 115.6°W','America/Edmonton',7.9,18.9,'elk, bighorn sheep, Clark’s nutcrackers',{bells:-.4,stream:.1}),
+ L('ebc','mountain','himalaya','Everest Base Camp','Khumbu, Nepal','28.0°N 86.9°E','Asia/Kathmandu',5.95,17.65,'yaks, prayer flags and lammergeiers'),
+ L('jebelshams','mountain','canyon','Jebel Shams','Al Hajar, Oman','23.2°N 57.3°E','Asia/Muscat',6.05,17.75,'Arabian tahr, ravens and wadi wind'),
+ L('wadirum','mountain','canyon','Wadi Rum','Aqaba, Jordan','29.6°N 35.4°E','Asia/Amman',6.3,17.9,'sandstone arches, desert larks, night crickets'),
+ L('grandcanyon','mountain','canyon','Grand Canyon','Arizona, USA','36.1°N 112.1°W','America/Phoenix',6.6,18.15,'ravens, condors and canyon wrens',{stream:.15}),
+ L('landmannalaugar','mountain','volcanic','Landmannalaugar','Highlands, Iceland','64.0°N 19.1°W','Atlantic/Reykjavik',8,18.35,'rhyolite hills, lava fields and hot springs'),
+ L('zhangjiajie','mountain','karst','Zhangjiajie','Hunan, China','29.3°N 110.4°E','Asia/Shanghai',6.4,18.2,'sandstone pillars, pines and rhesus macaques'),
+ L('khoraladaid','mountain','dunes','Khor Al Adaid','Inland Sea, Qatar','24.6°N 51.3°E','Asia/Qatar',5.55,17.25,'star dunes meeting the sea, desert wind'),
+ L('liwa','mountain','dunes','Liwa Oasis','Abu Dhabi, UAE','23.1°N 53.8°E','Asia/Dubai',6.2,17.9,'Empty Quarter dunes and silent nights'),
+ L('shinjuku','city','neon','Shinjuku','Tokyo, Japan','35.7°N 139.7°E','Asia/Tokyo',5.7,17.2,'crosswalk chimes, Yamanote trains, crows',{train:.15}),
+ L('mongkok','city','neon','Mong Kok','Hong Kong','22.3°N 114.2°E','Asia/Hong_Kong',6.2,18,'minibuses, trams and neon signs',{traffic:.15}),
+ L('prague','city','oldtown','Old Town Square','Prague, Czechia','50.1°N 14.4°E','Europe/Prague',7.15,18.4,'trams, pigeons and church bells',{train:.1}),
+ L('paris','city','oldtown','Montmartre','Paris, France','48.9°N 2.3°E','Europe/Paris',8,19.25,'cafés, scooters and the metro',{cars:.15}),
+ L('westbay','city','desertcity','West Bay','Doha, Qatar','25.3°N 51.5°E','Asia/Qatar',5.6,17.3,'glass towers, the Corniche and Gulf breeze'),
+ L('marina','city','desertcity','Dubai Marina','Dubai, UAE','25.1°N 55.1°E','Asia/Dubai',6.15,17.85,'tram bells, yachts and sea breeze',{train:.1}),
+ L('newyork','city','wintercity','Central Park South','New York, USA','40.8°N 74.0°W','America/New_York',7.1,18.5,'subway rumble, yellow cabs and snowy avenues'),
+ L('mumbai','city','monsooncity','Dadar','Mumbai, India','19.0°N 72.8°E','Asia/Kolkata',6.45,18.3,'local trains, rickshaws and monsoon rain'),
+ L('maldives','shore','lagoon','Baa Atoll','Maldives','5.2°N 73.1°E','Indian/Maldives',6,18,'reef herons, palms and soft surf'),
+ L('zanzibar','shore','lagoon','Nungwi Beach','Zanzibar, Tanzania','5.7°S 39.3°E','Africa/Dar_es_Salaam',6.25,18.4,'dhows, ghost crabs and trade winds',{wind:.15}),
+ L('bigsur','shore','cliffs','Big Sur','California, USA','36.3°N 121.9°W','America/Los_Angeles',7.15,18.6,'sea lions, pelicans and kelp swell',{bells:-.2}),
+ L('landsend','shore','cliffs','Land’s End','Cornwall, UK','50.1°N 5.7°W','Europe/London',7.45,18.5,'gannets, granite cliffs and Atlantic swell'),
+ L('ilulissat','shore','arctic','Ilulissat Icefjord','Greenland','69.2°N 51.1°W','America/Nuuk',8.2,18.4,'calving icebergs, eiders and sled dogs'),
+ L('purpleisland','shore','mangrove','Purple Island','Al Khor, Qatar','25.7°N 51.5°E','Asia/Qatar',5.55,17.25,'grey mangroves, herons and crabs'),
+ L('amalfi','shore','medcove','Amalfi Coast','Campania, Italy','40.6°N 14.6°E','Europe/Rome',7.2,18.65,'lemon terraces, fishing boats and cicadas'),
+ L('santorini','shore','medcove','Ammoudi Bay','Santorini, Greece','36.5°N 25.4°E','Europe/Athens',7.35,18.85,'volcanic cliffs, fishing caïques and the Aegean'),
+ L('cappadocia','sky','balloons','Göreme Valley','Cappadocia, Türkiye','38.6°N 34.8°E','Europe/Istanbul',7.15,18.55,'hot-air balloons, fairy chimneys and dawn burners'),
+ L('teide','sky','cloudsea','Mount Teide','Tenerife, Spain','28.3°N 16.6°W','Atlantic/Canary',8,19.55,'a sea of clouds below the volcano'),
+ L('haleakala','sky','cloudsea','Haleakalā Summit','Maui, Hawaii','20.7°N 156.3°W','Pacific/Honolulu',6.4,18.1,'sunrise above the clouds at 3,055 m'),
+ L('tornadoalley','sky','stormsky','Tornado Alley','Oklahoma, USA','35.5°N 97.5°W','America/Chicago',7.4,19.05,'supercells, hail cores and prairie wind'),
+ L('atacama','sky','milkyway','Atacama Desert','Antofagasta, Chile','22.9°S 68.2°W','America/Santiago',7.35,19.85,'the clearest skies on Earth'),
+ L('zekreet','sky','milkyway','Zekreet Desert','Dukhan, Qatar','25.5°N 50.8°E','Asia/Qatar',5.55,17.25,'limestone mushrooms under the Milky Way'),
+ L('tromso','sky','aurorasky','Tromsø','Troms, Norway','69.6°N 18.9°E','Europe/Oslo',7.65,17.75,'northern lights over frozen fjords'),
+ L('yellowknife','sky','aurorasky','Yellowknife','Northwest Territories, Canada','62.5°N 114.4°W','America/Yellowknife',7.9,18.9,'aurora over Great Slave Lake'),
+ // Kerala, India
+ L('munnar','forest','monsoon','Munnar Tea Hills','Idukki, Kerala, India','10.1°N 77.1°E','Asia/Kolkata',6.2,18.15,'tea estates, Nilgiri tahr and whistling thrushes',{thunder:-.3,birds:.25}),
+ L('periyar','forest','rainforest','Periyar Tiger Reserve','Thekkady, Kerala, India','9.6°N 77.2°E','Asia/Kolkata',6.2,18.15,'wild elephants, hornbills and cicadas',{birds:.15,crickets:.1}),
+ L('silentvalley','forest','rainforest','Silent Valley','Palakkad, Kerala, India','11.1°N 76.4°E','Asia/Kolkata',6.25,18.15,'lion-tailed macaques and famously few cicadas',{crickets:-.3,stream:.2}),
+ L('athirappilly','forest','rainforest','Athirappilly Falls','Thrissur, Kerala, India','10.3°N 76.6°E','Asia/Kolkata',6.2,18.15,'Kerala’s largest waterfall and great hornbills',{stream:.45,rain:-.2}),
+ L('wayanad','forest','monsoon','Chembra Peak','Wayanad, Kerala, India','11.7°N 76.1°E','Asia/Kolkata',6.3,18.2,'heart-shaped lake, mist and wild elephants',{thunder:-.3}),
+ L('alleppey','shore','lagoon','Alappuzha Backwaters','Alappuzha, Kerala, India','9.5°N 76.3°E','Asia/Kolkata',6.2,18.15,'houseboats, coconut palms and kingfishers',{waves:-.45,birds:.25,gulls:-.3}),
+ L('kumarakom','shore','mangrove','Kumarakom','Vembanad Lake, Kerala, India','9.6°N 76.4°E','Asia/Kolkata',6.2,18.15,'mangroves, egrets and darters on the lake',{waves:-.1,birds:.2}),
+ L('varkala','shore','medcove','Varkala Cliff','Thiruvananthapuram, Kerala, India','8.7°N 76.7°E','Asia/Kolkata',6.2,18.15,'red laterite cliffs and Arabian Sea surf',{bells:-.2,crickets:-.2}),
+ L('kovalam','shore','lagoon','Kovalam Beach','Thiruvananthapuram, Kerala, India','8.4°N 77.0°E','Asia/Kolkata',6.2,18.15,'lighthouse beach, palms and fishing boats',{bells:.15}),
+ L('bekal','shore','cliffs','Bekal Fort Beach','Kasaragod, Kerala, India','12.4°N 75.0°E','Asia/Kolkata',6.35,18.2,'a sea fort, monsoon swell and terns',{wind:-.2}),
+ L('fortkochi','city','oldtown','Fort Kochi','Kochi, Kerala, India','9.97°N 76.24°E','Asia/Kolkata',6.2,18.15,'Chinese fishing nets, ferries and spice markets',{traffic:.1}),
+ // More of Asia
+ L('ubud','forest','rainforest','Ubud Rice Terraces','Bali, Indonesia','8.4°S 115.3°E','Asia/Makassar',5.95,18.15,'rice paddies, geckos and gamelan breeze',{frogs:.2}),
+ L('nuwaraeliya','forest','monsoon','Nuwara Eliya','Central Province, Sri Lanka','6.9°N 80.8°E','Asia/Colombo',6.0,18.0,'tea country, mist and highland birds',{thunder:-.3}),
+ L('sundarbans','shore','mangrove','Sundarbans','Khulna, Bangladesh','21.9°N 89.2°E','Asia/Dhaka',5.9,17.6,'Bengal tigers, kingfishers and tidal creeks'),
+ L('halong','mountain','karst','Ha Long Bay','Quảng Ninh, Vietnam','20.9°N 107.1°E','Asia/Ho_Chi_Minh',5.85,17.6,'limestone islands, junk boats and sea mist',{stream:-.2}),
+ L('guilin','mountain','karst','Li River','Guilin, China','25.3°N 110.3°E','Asia/Shanghai',6.45,18.1,'karst peaks, bamboo rafts and cormorants',{stream:.2}),
+ L('fuji','mountain','volcanic','Mount Fuji','Yamanashi, Japan','35.4°N 138.7°E','Asia/Tokyo',5.75,17.35,'Japan’s sacred volcano above the Five Lakes'),
+ L('leh','mountain','himalaya','Leh','Ladakh, India','34.2°N 77.6°E','Asia/Kolkata',6.65,18.2,'monasteries, prayer flags and high desert wind'),
+ L('annapurna','mountain','himalaya','Annapurna Base Camp','Gandaki, Nepal','28.5°N 83.9°E','Asia/Kathmandu',6.0,17.75,'glaciers, choughs and yak bells'),
+ L('kathmandu','city','oldtown','Kathmandu Durbar Square','Kathmandu, Nepal','27.7°N 85.3°E','Asia/Kathmandu',6.0,17.75,'temple bells, pigeons and prayer wheels'),
+ L('varanasi','city','oldtown','Varanasi Ghats','Uttar Pradesh, India','25.3°N 83.0°E','Asia/Kolkata',5.85,17.55,'river ghats, boats and evening bells'),
+ L('bangkok','city','monsooncity','Bangkok','Thailand','13.75°N 100.5°E','Asia/Bangkok',6.05,17.95,'tuk-tuks, skytrain and afternoon storms'),
+ L('singapore','city','neon','Marina Bay','Singapore','1.28°N 103.86°E','Asia/Singapore',6.95,19.0,'skyline lights, MRT trains and tropical rain'),
+ L('seoul','city','neon','Gangnam','Seoul, South Korea','37.5°N 127.0°E','Asia/Seoul',6.4,18.05,'neon streets, subway chimes and late cafés'),
+ L('shanghai','city','neon','The Bund','Shanghai, China','31.2°N 121.5°E','Asia/Shanghai',5.85,17.55,'river horns, Pudong lights and traffic'),
+ L('elnido','shore','lagoon','El Nido','Palawan, Philippines','11.2°N 119.4°E','Asia/Manila',5.75,17.6,'limestone lagoons, bangka boats and reef surf'),
+ L('railay','shore','lagoon','Railay Beach','Krabi, Thailand','8.0°N 98.8°E','Asia/Bangkok',6.2,18.1,'limestone cliffs, longtail boats and warm surf'),
+ L('palolem','shore','lagoon','Palolem Beach','Goa, India','15.0°N 74.0°E','Asia/Kolkata',6.4,18.3,'palm-lined crescent bay and fishing canoes'),
+ L('jaisalmer','sky','milkyway','Thar Desert','Jaisalmer, India','26.9°N 70.9°E','Asia/Kolkata',6.85,18.35,'sand dunes, camels and a dark desert sky'),
+ L('gobi','sky','milkyway','Gobi Desert','Ömnögovi, Mongolia','43.6°N 104.0°E','Asia/Ulaanbaatar',7.35,18.55,'singing dunes, gers and the Milky Way'),
+ L('hokkaido','forest','boreal','Shiretoko','Hokkaido, Japan','44.1°N 145.1°E','Asia/Tokyo',5.6,16.95,'brown bears, Blakiston’s fish owls and snow'),
+ L('borneoclouds','sky','cloudsea','Mount Kinabalu','Sabah, Malaysia','6.1°N 116.6°E','Asia/Kuching',5.95,18.0,'sunrise above the clouds at 4,095 m'),
+ L('corniche','shore','gulf','Doha Corniche','Doha, Qatar','25.3°N 51.5°E','Asia/Qatar',5.6,17.3,'dhows, the skyline and evening breeze'),
+];
+const ACCENTS = [
+ { id:'auto', name:'Scene' },
+ { id:'moss', name:'Moss', d:'#2f6f3a', n:'#9ed58b' },
+ { id:'lagoon', name:'Lagoon', d:'#1f6f96', n:'#7cc8ee' },
+ { id:'amber', name:'Amber', d:'#9a5f0c', n:'#f2b65a' },
+ { id:'ember', name:'Ember', d:'#b14e1c', n:'#f0a35b' },
+ { id:'berry', name:'Berry', d:'#a3305f', n:'#f08ab4' },
+ { id:'iris', name:'Iris', d:'#5a4fc4', n:'#b3a8ff' },
+ { id:'slate', name:'Slate', d:'#3d4a55', n:'#c4d0da' },
+];
+const REGIONS = ['All','Kerala','Asia','Middle East','Europe','Americas','Africa','Oceania'];
+const MIDEAST = ['Asia/Qatar','Asia/Dubai','Asia/Muscat','Asia/Amman','Asia/Riyadh','Europe/Istanbul'];
+function regionOf(l){
+  if (MIDEAST.includes(l.tz)) return 'Middle East';
+  const p = l.tz.split('/')[0];
+  if (p === 'Asia' || p === 'Indian') return 'Asia';
+  if (p === 'Europe' || l.tz === 'Atlantic/Reykjavik' || l.tz === 'Atlantic/Canary') return 'Europe';
+  if (p === 'America') return 'Americas';
+  if (p === 'Africa') return 'Africa';
+  return 'Oceania';
+}
+const inRegion = (l, r) => r === 'All' || (r === 'Kerala' ? l.place.includes('Kerala') : regionOf(l) === r);
+let locRegion = 'All';
+function locNow(l){
+  try {
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone:l.tz, hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date());
+    const h = +p.find(x => x.type === 'hour').value, m = +p.find(x => x.type === 'minute').value;
+    return { txt:`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, phase: phaseAt(h + m/60, l.rise, l.set) };
+  } catch(e){ return { txt:'--:--', phase:'day' }; }
+}
+function phaseAt(d, rise, set){ if (Math.abs(d - rise) <= .75) return 'sunrise'; if (Math.abs(d - set) <= .75) return 'sunset'; return d > rise && d < set ? 'day' : 'night'; }
+
+/* ---------- Palettes ---------- */
+const NT = hex('#05101a'), MOON = hex('#e6ecf7');
+const GOLD = {
+  sunrise:{ top:hex('#5b78b6'), bot:hex('#f8c08e'), tint:hex('#ffb07a'), fog:hex('#f0c7a8'), sun:hex('#ffd08c') },
+  sunset:{ top:hex('#3a2a6a'), bot:hex('#f27f4c'), tint:hex('#ff7646'), fog:hex('#c9846f'), sun:hex('#ff9650') }
+};
+const STRONG = { snow:.38, sand:.25, water:.28, glass:.3 };
+SC.forEach(s => {
+  s.D = { sky:s.day.sky.map(hex), fog:hex(s.day.fog), sun:hex(s.day.sun) };
+  s.N = { sky:s.night.sky.map(hex), fog:hex(s.night.fog) };
+  s.K = {}; for (const k in s.cols) s.K[k] = s.cols[k].map(hex);
+});
+function phaseColor(c, key, ph){
+  if (key === 'neon' || ph === 'day') return c.slice();
+  if (ph === 'night') return mix(c, NT, key === 'snow' ? .66 : .74);
+  return mix(mix(c, NT, ph === 'sunrise' ? .26 : .4), GOLD[ph].tint, STRONG[key] || .12);
+}
+function targetPal(s, ph){
+  const D = s.D, N = s.N, T = {};
+  if (ph === 'day') Object.assign(T, { sky:D.sky.map(c=>c.slice()), fog:D.fog.slice(), sun:D.sun.slice(), sunX:.76, sunY:.17, sunR:26, star:0, dark:0 });
+  else if (ph === 'night') Object.assign(T, { sky:N.sky.map(c=>c.slice()), fog:N.fog.slice(), sun:MOON.slice(), sunX:.74, sunY:.16, sunR:17, star:1, dark:1 });
+  else {
+    const g = GOLD[ph], rise = ph === 'sunrise';
+    T.sky = [mix(rise ? D.sky[0] : N.sky[1], g.top, rise ? .7 : .6), mix(D.sky[1], g.bot, .82)];
+    T.fog = rise ? mix(D.fog, g.fog, .65) : mix(mix(D.fog, N.fog, .3), g.fog, .7);
+    T.sun = g.sun.slice(); T.sunX = rise ? .22 : .8; T.sunY = .47; T.sunR = 34; T.star = rise ? .12 : .3; T.dark = rise ? .42 : .62;
+  }
+  T.sunA = s.sunA;
+  for (const k in s.K) T[k] = s.K[k].map(c => phaseColor(c, k, ph));
+  return T;
+}
+const clonePal = p => JSON.parse(JSON.stringify(p));
+function lerpPal(a, b, k){
+  for (const key in b) {
+    const v = b[key];
+    if (typeof v === 'number') a[key] += (v - a[key])*k;
+    else if (typeof v[0] === 'number') for (let i=0;i<3;i++) a[key][i] += (v[i] - a[key][i])*k;
+    else v.forEach((c,j) => { const ac = a[key][j]; for (let i=0;i<3;i++) ac[i] += (c[i] - ac[i])*k; });
+  }
+}
+
+/* ---------- State ---------- */
+let li = LOCS.findIndex(l => l.id === store.get('de.loc'));
+let liveTime = store.get('de.live') !== '0';
+let accent = ACCENTS.find(a => a.id === store.get('de.accent')) || ACCENTS[0];
+let si = li >= 0 ? SC.findIndex(s => s.id === LOCS[li].scene) : Math.max(0, SC.findIndex(s => s.id === store.get('de.scene')));
+let world = SC[si].world;
+const lastScene = {};
+let phase = (() => {
+  if (li >= 0 && liveTime) return locNow(LOCS[li]).phase;
+  const d = new Date(), h = d.getHours() + d.getMinutes()/60;
+  return phaseAt(h, 6, 17.6);
+})();
+let tgt = targetPal(SC[si], phase), cur = clonePal(tgt);
+const isDarkUI = () => phase === 'sunset' || phase === 'night';
+document.documentElement.setAttribute('data-theme', isDarkUI() ? 'dark' : 'light');
+
+/* ---------- Canvas ---------- */
+const cv = $('#scene'), g = cv.getContext('2d');
+let W = 0, H = 0, vignette = null, cam = 0;
+let layers = [], ridges = [], nearTrees = null, city = [], skyline = [], stars = [], rain = [], snow = [], leaves = [], motes = [], flies = [], birds = [], wisps = [], cars = [];
+let flashA = 0, bolt = null, owl = null, train = null, dhowX = 0, floes = [], mangroves = [], skyw = null, DPR = 1;
+let waveT = 99, waveUp = 2.2, waveDown = 4;
+
+const FOREST_L = [
+  { base:.57, h:.15, sp:.45, depth:.74, par:.12 },
+  { base:.66, h:.22, sp:.48, depth:.52, par:.28 },
+  { base:.77, h:.32, sp:.55, depth:.3,  par:.55 },
+  { base:.92, h:.5,  sp:.62, depth:.07, par:1 }
+];
+function makeTrees(r, L, types, nLeaf, hScale){
+  const trees = [], hh = Math.min(H, W*1.6)*L.h*(hScale||1);
+  let x = r()*30;
+  while (x < W) {
+    const h = hh*(.7 + r()*.6), type = types[(r()*types.length)|0], blobs = [];
+    for (let i=0;i<6;i++) blobs.push({ dx:(r()-.5)*.5, dy:-(.5 + r()*.42), rr:.12 + r()*.11 });
+    trees.push({ x, h, type, ci:(r()*Math.max(1,nLeaf))|0, ph:r()*6.28, bend:r()-.5, blobs });
+    x += h*L.sp*(.55 + r()*.8)*(type === 'shrub' ? 3 : type === 'acacia' ? 2.4 : type === 'bamboo' ? .5 : type === 'cypress' ? .7 : 1);
+  }
+  return trees;
+}
+function build(){
+  const s = SC[si], r0 = rng(si*997 + 5);
+  layers = []; ridges = []; nearTrees = null; city = []; skyline = []; cars = []; train = null;
+  const nLeaf = (s.cols.leaf || []).length;
+  if (s.world === 'forest') {
+    layers = FOREST_L.map((Lr,k) => ({ ...Lr, trees: makeTrees(rng(si*1000 + k*77 + 13), Lr, s.trees, nLeaf), hp:r0()*6.28 }));
+  }
+  if (s.world === 'mountain') {
+    ridges = [0,1,2].map(k => {
+      const r = rng(si*500 + k*41 + 3);
+      return { base:[.6,.7,.8][k], amp:[.36,.26,.17][k], depth:[.6,.38,.18][k], par:[.04,.1,.22][k],
+        waves: (s.karst ? [5,8,11,14,19,23] : [1,2,3,5,8,13]).map((f,i) => ({ f: f + (k > 0 && i < 3 ? 1 : 0), a: s.karst ? 1/(1 + i*.35) : 1/(1 + i*1.5)**1.3, ph:r()*6.28, sharp: s.dunes ? false : s.karst ? true : s.soft ? i === 0 : (i < 3 ? r() < .7 : false) })).map((w,i) => s.dunes ? { ...w, f:[1,2,3,4,6,9][i], a:1/(1 + i*2.2)**1.5 } : w) };
+    });
+    if (s.trees.length) nearTrees = { base:.93, h:.3, sp:.6, depth:.06, par:.4, trees: makeTrees(rng(si*77 + 9), { h:.3, sp:.6 }, s.trees, nLeaf) };
+    else ridges.push({ base:.93, amp:.1, depth:.04, par:.4, ground:true, waves: Array.from({length:5}, (_,i) => ({ f:2 + i*2, a:1/(1 + i), ph:r0()*6.28, sharp:true })) });
+  }
+  if (s.world === 'city') {
+    const CL = [{ base:.63, h:.2, sc:.55, depth:.58, par:.04 }, { base:.75, h:.3, sc:.78, depth:.32, par:.09 }, { base:.88, h:.42, sc:1, depth:.06, par:.16 }];
+    city = CL.map((Lc,k) => {
+      const r = rng(si*1000 + k*31 + 7), b = []; let x = -r()*20, id = k*1000 + 1;
+      while (x < W) {
+        const type = s.types[(r()*s.types.length)|0];
+        let w = (26 + r()*44)*Lc.sc*(W < 500 ? .85 : 1), h = H*Lc.h*(.45 + r()*.6);
+        if (type === 'tower') { h *= 1.3; w *= .8; } if (type === 'pitched') h *= .62; if (type === 'spire') h *= 1.05; if (type === 'dome') { h *= .55; w *= 1.3; }
+        h = Math.min(h, H*(Lc.h + .06));
+        b.push({ x, w, h, type, id:id++, lit:.25 + r()*.45, ant:r() < .3, roof:r() < .4, sign:r() < .4 });
+        x += w + r()*6*Lc.sc;
+      }
+      return { ...Lc, b, k };
+    });
+  }
+  if (s.world === 'shore' && s.far === 'skyline') {
+    const r = rng(17); let x = W*.52; let id = 5000;
+    while (x < W*.97) { const w = rand(8,18), h = H*rand(.02,.085)*(x > W*.7 && x < W*.85 ? 1.5 : 1); skyline.push({ x, w, h, type: r() < .5 ? 'tower' : 'box', id:id++, lit:.4 + r()*.4 }); x += w + 2; }
+  }
+  if (s.world === 'shore') dhowX = W*.3;
+  floes = s.near === 'ice' ? Array.from({length:7}, () => ({ x:Math.random()*W, f:rand(.2,.95), w:rand(20,70), v:rand(2,6) })) : [];
+  mangroves = s.near === 'mangrove' ? [.03,.16,.84,.97].map(fx => { const r = rng((fx*1000)|0); return { x:W*fx, h:H*(.3 + r()*.12), blobs:Array.from({length:7}, () => ({ dx:(r()-.5)*.6, dy:-(.55 + r()*.4), rr:.12 + r()*.1 })) }; }) : [];
+  skyw = null;
+  if (s.world === 'sky') {
+    const r = rng(si*313 + 1);
+    const clouds = [0,1,2].map(k => { const puffs = []; let x = 0; const R = H*[.045,.07,.11][k]; while (x < W) { const rr = R*(.6 + r()*.7); puffs.push({ x, r:rr, dy:-r()*rr*.7 }); x += rr*(.9 + r()*.5); } return { puffs, base:[.66,.76,.9][k], par:[.06,.14,.3][k], depth:[.5,.28,.06][k] }; });
+    const balloons = s.balloons ? Array.from({length:8}, (_,i) => { const d = r(); return { x:r()*W, y:H*(.18 + r()*.42), s:H*(.018 + d*.05), depth:.6*(1 - d), c:(r()*6)|0, v:rand(3,9), ph:r()*6.28, flame:0 }; }).sort((a,b) => a.s - b.s) : [];
+    const milky = s.milky ? Array.from({length:700}, () => { let v = 0; for (let i=0;i<4;i++) v += r(); return { u:r(), v:(v - 2)*.045, s:r()*1.2 + .3, ph:r()*6.28 }; }) : [];
+    const cones = s.ground === 'hills' ? Array.from({length:7}, () => ({ x:r()*W, h:H*(.04 + r()*.05), w:H*(.012 + r()*.012) })) : [];
+    const pines = s.ground === 'lake' ? Array.from({length:Math.ceil(W/6)}, () => .3 + r()*.7) : [];
+    skyw = { clouds, balloons, milky, cones, pines, meteors:[], boltT:3, flameT:1.5 };
+  }
+  const r = rng(42);
+  stars = Array.from({length:140}, () => ({ x:r(), y:r()*.5, s:r()*1.3 + .3, ph:r()*6.28 }));
+  snow = s.fx === 'snow' ? Array.from({length: Math.min(s.world === 'mountain' ? 70 : 170, W*H/4000|0)}, () => ({ x:Math.random()*W, y:Math.random()*H, r:rand(.8,2.6), v:rand(18,45), ph:rand(0,6.28) })) : [];
+  leaves = s.fx === 'leaves' ? Array.from({length:34}, () => ({ x:Math.random()*W, y:Math.random()*H, vx:rand(10,40), vy:rand(25,55), a:rand(0,6.28), va:rand(-3,3), c:(Math.random()*nLeaf)|0, s:rand(3,6) })) : [];
+  motes = (s.fx === 'pollen' || s.fx === 'dust') ? Array.from({length:36}, () => ({ x:Math.random()*W, y:rand(H*.35,H), v:rand(4,12), ph:rand(0,6.28), r:rand(.8,2) })) : [];
+  flies = s.world === 'forest' && s.id !== 'boreal' ? Array.from({length:28}, () => ({ x:Math.random()*W, y:rand(H*.55,H*.95), ph:rand(0,6.28), sp:rand(.4,1.1), vx:rand(-8,8), vy:rand(-5,5) })) : [];
+  wisps = Array.from({length:5}, (_,i) => ({ x:Math.random()*W, y:H*(.5 + i*.08), rx:W*rand(.35,.6), ry:H*rand(.05,.09), v:rand(4,12)*(Math.random() < .5 ? -1 : 1) }));
+  rain.length = 0; birds.length = 0;
+}
+function resize(){
+  const dpr = Math.min(innerWidth < 600 ? 1.75 : 2, window.devicePixelRatio || 1); DPR = dpr;
+  W = innerWidth; H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr; g.setTransform(dpr,0,0,dpr,0,0);
+  vignette = g.createRadialGradient(W/2, H*.45, Math.min(W,H)*.3, W/2, H*.5, Math.max(W,H)*.8);
+  vignette.addColorStop(0,'rgba(0,0,0,0)'); vignette.addColorStop(1,'rgba(0,0,0,.26)');
+  build();
+}
+
+/* ---- shapes ---- */
+function drawTree(t, x, by, col, trunk, time, snowCol){
+  const h = t.h, s = reduce ? 0 : Math.sin(time*.7 + t.ph)*h*.018;
+  if (t.type === 'pine') {
+    g.fillStyle = trunk; g.fillRect(x - h*.022, by - h*.26, h*.044, h*.26);
+    for (let i=0;i<4;i++){
+      const y0 = by - h*(.14 + i*.2), w = h*(.34 - i*.068), top = by - h*(.46 + i*.18), sx = s*(i+1)/4;
+      g.fillStyle = col; g.beginPath(); g.moveTo(x - w + sx*.4, y0); g.lineTo(x + w + sx*.4, y0); g.lineTo(x + sx, top); g.closePath(); g.fill();
+      if (snowCol) { const f = .32; g.fillStyle = snowCol; g.beginPath(); g.moveTo(x + sx, top); g.lineTo(x - w*f + sx*.9, top + (y0-top)*f); g.lineTo(x + w*f*.6 + sx*.9, top + (y0-top)*f*.8); g.closePath(); g.fill(); }
+    }
+  } else if (t.type === 'round' || t.type === 'shrub') {
+    const sh = t.type === 'shrub';
+    if (!sh) { g.fillStyle = trunk; g.beginPath(); g.moveTo(x - h*.035, by); g.lineTo(x - h*.014 + s*.5, by - h*.55); g.lineTo(x + h*.014 + s*.5, by - h*.55); g.lineTo(x + h*.035, by); g.closePath(); g.fill(); }
+    g.fillStyle = col; g.beginPath();
+    for (const b of t.blobs) { const k = sh ? .35 : 1, bx = x + b.dx*h*(sh ? .7 : 1) + s, byy = by + b.dy*h*k + (sh ? h*.02 : 0), rr = b.rr*h*(sh ? .45 : 1); g.moveTo(bx + rr, byy); g.arc(bx, byy, rr, 0, 6.2832); }
+    g.fill();
+  } else if (t.type === 'bamboo') {
+    g.strokeStyle = col; g.lineCap = 'round';
+    for (let i=0;i<4;i++){
+      const b = t.blobs[i], ox = (i - 1.5)*h*.05 + b.dx*h*.08, hh = h*(.78 + b.rr*1.6), w = Math.max(1.2, h*.017), sw = s*(1 + i*.25);
+      g.lineWidth = w; g.beginPath(); g.moveTo(x + ox, by); g.quadraticCurveTo(x + ox, by - hh*.6, x + ox + sw, by - hh); g.stroke();
+      g.lineWidth = Math.max(1, w*.75);
+      for (let k=0;k<6;k++){ const f = .5 + k*.085, ly = by - hh*f, lx = x + ox + sw*f*f, d = k % 2 ? 1 : -1; g.beginPath(); g.moveTo(lx, ly); g.quadraticCurveTo(lx + d*h*.04, ly - h*.01, lx + d*h*.085, ly + h*.025); g.stroke(); }
+    }
+  } else if (t.type === 'acacia') {
+    g.strokeStyle = trunk; g.lineCap = 'round'; g.lineWidth = Math.max(1.5, h*.03);
+    g.beginPath(); g.moveTo(x, by); g.lineTo(x + s*.3, by - h*.42); g.lineTo(x - h*.14 + s, by - h*.7); g.moveTo(x + s*.3, by - h*.42); g.lineTo(x + h*.12 + s, by - h*.72); g.stroke();
+    g.fillStyle = col; g.beginPath(); g.ellipse(x + s, by - h*.75, h*.34, h*.075, 0, 0, 6.2832); g.ellipse(x - h*.08 + s, by - h*.7, h*.18, h*.05, 0, 0, 6.2832); g.fill();
+  } else if (t.type === 'cypress') {
+    g.fillStyle = trunk; g.fillRect(x - h*.015, by - h*.12, h*.03, h*.12);
+    g.fillStyle = col; g.beginPath(); g.moveTo(x + s, by - h);
+    g.quadraticCurveTo(x + h*.11 + s*.6, by - h*.55, x + h*.07, by - h*.08); g.lineTo(x - h*.07, by - h*.08); g.quadraticCurveTo(x - h*.11 + s*.6, by - h*.55, x + s, by - h); g.fill();
+  } else {
+    const tx = x + h*.14*t.bend + s, ty = by - h*.92;
+    g.strokeStyle = trunk; g.lineWidth = Math.max(1.5, h*.028); g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x, by); g.quadraticCurveTo(x + h*.02*t.bend, by - h*.5, tx, ty); g.stroke();
+    g.strokeStyle = col; g.lineWidth = Math.max(2, h*.034);
+    for (let i=0;i<8;i++){
+      const a = -Math.PI*.05 - i*(Math.PI*1.1/7), fx = tx + Math.cos(a)*h*.34, fy = ty + h*.16 + Math.sin(time + i)*h*.006;
+      g.beginPath(); g.moveTo(tx, ty); g.quadraticCurveTo(tx + Math.cos(a)*h*.18, ty - h*.1, fx, fy); g.stroke();
+    }
+  }
+}
+function eachWrap(x0, off, w, fn){ const x = ((x0 - off) % W + W) % W; fn(x); if (x + w > W) fn(x - W); if (x < w*.5) fn(x + W); }
+
+function drawBuilding(b, x, by, col, P, k, t, signs){
+  const w = b.w, h = b.h, top = by - h; let bodyTop = top;
+  g.fillStyle = col; g.beginPath();
+  if (b.type === 'box') { g.rect(x, top, w, h); if (b.roof) g.rect(x + w*.2, top - h*.05, w*.25, h*.05); if (b.ant) g.rect(x + w*.6, top - h*.16, 1.5, h*.16); }
+  else if (b.type === 'tower') { g.moveTo(x, by); g.lineTo(x, top + h*.1); g.lineTo(x + w*.2, top); g.lineTo(x + w*.8, top); g.lineTo(x + w, top + h*.1); g.lineTo(x + w, by); g.closePath(); g.rect(x + w*.5 - 1, top - h*.12, 2, h*.12); bodyTop = top + h*.1; }
+  else if (b.type === 'pitched') { bodyTop = top + h*.24; g.rect(x, bodyTop, w, h*.76); g.moveTo(x - 2, bodyTop); g.lineTo(x + w/2, top); g.lineTo(x + w + 2, bodyTop); g.closePath(); if (b.roof) g.rect(x + w*.7, top + h*.06, w*.1, h*.14); }
+  else if (b.type === 'spire') { bodyTop = top + h*.36; g.rect(x + w*.2, bodyTop, w*.6, h*.64); g.moveTo(x + w*.2, bodyTop); g.lineTo(x + w*.5, top); g.lineTo(x + w*.8, bodyTop); g.closePath(); g.rect(x - w*.15, top + h*.62, w*1.3, h*.38); }
+  else if (b.type === 'dome') { bodyTop = top + h*.42; g.rect(x, bodyTop, w, h*.58); g.moveTo(x + w*.85, bodyTop); g.arc(x + w/2, bodyTop, w*.35, 0, Math.PI, true); g.rect(x + w*.9, top - h*.15, w*.07, h*1.15); g.moveTo(x + w*.935 + 3, top - h*.15); g.arc(x + w*.935, top - h*.15, 3, 0, 6.2832); }
+  g.fill();
+  // windows
+  const cw = [4,6,9][k], chh = [5,8,11][k], ww = [2,3,5][k], wh = [2,4,6][k];
+  const x0 = x + (b.type === 'spire' ? w*.2 : 0) + 3, x1 = x + (b.type === 'spire' ? w*.8 : w) - 3;
+  if (P.dark > .05) {
+    const nArr = P.neon || [];
+    for (let yy = bodyTop + 4, i = 0; yy < by - wh - 2; yy += chh, i++) for (let xx = x0, j = 0; xx < x1 - ww; xx += cw, j++) {
+      if (hash(b.id, i, j) > b.lit) continue;
+      const neonPick = nArr.length && hash(b.id + 7, i, j) < .18;
+      const c = neonPick ? nArr[(hash(b.id, j, i)*nArr.length)|0] : [255, 214, 150];
+      g.fillStyle = rgb(c, P.dark*(.5 + .5*hash(i, b.id, j)));
+      g.fillRect(xx, yy, ww, wh);
+    }
+  } else if (k > 0 && P.glass) {
+    g.fillStyle = rgb(P.glass[0], .22);
+    for (let xx = x0; xx < x1 - ww; xx += cw) g.fillRect(xx, bodyTop + 4, ww, by - bodyTop - 8);
+  }
+  if (signs && k === 2 && b.sign && P.neon) {
+    const c = P.neon[b.id % P.neon.length], a = .35 + .6*P.dark, sx = x + w*.12, sy = top + h*.18, sh = h*.26;
+    const gl = g.createLinearGradient(sx - 12, 0, sx + 18, 0);
+    gl.addColorStop(0, rgb(c,0)); gl.addColorStop(.5, rgb(c, .25*P.dark)); gl.addColorStop(1, rgb(c,0));
+    g.fillStyle = gl; g.fillRect(sx - 12, sy - 8, 30, sh + 16);
+    g.fillStyle = rgb(c, a); g.fillRect(sx, sy, 6, sh);
+  }
+}
+function ridgePath(R, off){
+  const p = new Path2D(), by = H*R.base, amp = H*R.amp, s = SC[si];
+  p.moveTo(0, H);
+  for (let x = 0; x <= W + 6; x += 6) {
+    const u = (x + off)/W; let v = 0, sum = 0;
+    for (const w of R.waves) { const sv = Math.sin(6.2832*w.f*u + w.ph); v += w.a*(w.sharp ? 1 - Math.abs(sv) : (sv + 1)/2); sum += w.a; }
+    v = Math.max(0, (v/sum - .25)/.6);
+    if (s.mesa && !R.ground) v = Math.min(v*1.6, .78)/.78;
+    if (s.karst && !R.ground) v = Math.min(1.25, Math.pow(v, 2.2)*1.5);
+    if (s.dunes && !R.ground) v *= .6;
+    p.lineTo(x, by - amp*v);
+  }
+  p.lineTo(W, H); p.closePath();
+  return p;
+}
+
+function spawnBird(n){
+  const s = SC[si];
+  if (cur.dark > .7 || birds.length > 8) return;
+  const dir = Math.random() < .5 ? 1 : -1, y = H*rand(.1,.34), v = s.world === 'mountain' ? rand(25,40) : rand(38,70);
+  const size = s.world === 'mountain' ? rand(7,10) : s.world === 'shore' ? rand(6,8) : rand(4,7);
+  for (let i=0;i<(n||1);i++) birds.push({ x: dir > 0 ? -30 - i*22 : W + 30 + i*22, y: y + i*rand(-10,10), vx: dir*v, ph: rand(0,6.28), s: size, glide: s.world === 'mountain' });
+}
+function spawnCar(dir){ if (SC[si].world !== 'city' || cars.length > 14) return; dir = dir || (Math.random() < .5 ? 1 : -1); cars.push({ x: dir > 0 ? -40 : W + 40, dir, v: rand(90,160), col: ['#c23b3b','#e3e3e0','#2b5fa8','#202326','#d9a43a','#5b6b73'][(Math.random()*6)|0] }); }
+function spawnTrain(){ if (SC[si].world !== 'city' || train) return; const dir = Math.random() < .5 ? 1 : -1; train = { x: dir > 0 ? -320 : W + 20, dir, v: rand(140,190) }; }
+function lightning(){ flashA = 1; let x = rand(W*.15, W*.85), y = 0; const pts = [[x,y]]; while (y < H*rand(.35,.5)) { x += rand(-24,24); y += rand(14,30); pts.push([x,y]); } bolt = { pts, life:.35 }; }
+function owlEyes(){ if (cur.dark < .5 || SC[si].world !== 'forest') return; owl = { x: rand(W*.12, W*.88), y: H*rand(.5,.6), life:5, t:0 }; }
+function surge(up, down){ waveT = 0; waveUp = up; waveDown = down; }
+
+/* ---- per-world drawing ---- */
+function drawForest(P, t, dt, s){
+  const fog = P.fog, n = P.dark;
+  const snowCol = s.snowcap ? rgb(P.snow[0], .92) : null;
+  layers.forEach((Lr,k) => {
+    const by = H*Lr.base, off = cam*Lr.par, trunk = rgb(mix(P.trunk[0], fog, Lr.depth));
+    for (const tr of Lr.trees) { const leaf = rgb(mix(P.leaf[tr.ci], fog, Lr.depth)); eachWrap(tr.x, off, tr.h*.5, x => drawTree(tr, x, by, leaf, trunk, t, snowCol)); }
+    const gc = mix(P.leaf[0], fog, Lr.depth);
+    g.fillStyle = rgb(s.snowcap ? mix(gc, P.snow[0], .75) : mix(gc, [0,0,0], .12));
+    g.beginPath(); g.moveTo(0, H);
+    for (let x=0; x<=W+20; x+=20) g.lineTo(x, by + Math.sin((x + off)*.006 + Lr.hp)*H*.01*(k+1) - H*.005);
+    g.lineTo(W, H); g.closePath(); g.fill();
+    if (k < 3) fogBand(by, s.fog*.55, fog);
+    if (k === 2) {
+      drawWisps(fog, s.fog, dt);
+      if (owl) {
+        owl.life -= dt; owl.t += dt;
+        const blink = (owl.t % 2.4) > 2.25 ? 0 : 1, a = Math.min(1, owl.life, owl.t*2)*n*blink;
+        if (a > 0) { g.fillStyle = `rgba(255,196,80,${a})`; g.beginPath(); g.arc(owl.x - 5, owl.y, 2.4, 0, 6.2832); g.arc(owl.x + 5, owl.y, 2.4, 0, 6.2832); g.fill(); }
+        if (owl.life <= 0) owl = null;
+      }
+      if (n > .3) for (const f of flies) {
+        if (!reduce) { f.x += (f.vx + Math.sin(t*f.sp + f.ph)*10)*dt; f.y += (f.vy + Math.cos(t*f.sp*1.3 + f.ph)*6)*dt; }
+        if (f.x < 0) f.x = W; if (f.x > W) f.x = 0; if (f.y < H*.5) f.vy = Math.abs(f.vy); if (f.y > H) f.vy = -Math.abs(f.vy);
+        const a = (n - .3)*1.4*Math.max(0, Math.sin(t*f.sp*2 + f.ph)); if (a < .02) continue;
+        const fg2 = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, 9);
+        fg2.addColorStop(0, `rgba(222,255,140,${Math.min(1,a)})`); fg2.addColorStop(1, 'rgba(222,255,140,0)');
+        g.fillStyle = fg2; g.fillRect(f.x - 9, f.y - 9, 18, 18);
+      }
+    }
+  });
+}
+function drawMountain(P, t, dt, s){
+  const fog = P.fog;
+  ridges.forEach((R,k) => {
+    const off = cam*R.par*6, path = ridgePath(R, off);
+    const base = R.ground ? P.ground[0] : P.rock[Math.min(k,2)];
+    g.fillStyle = rgb(mix(base, fog, R.depth)); g.fill(path);
+    if (s.mesa && !R.ground) {
+      g.save(); g.clip(path); g.fillStyle = 'rgba(60,20,10,.09)';
+      for (let y = H*(R.base - R.amp); y < H; y += 12) g.fillRect(0, y, W, 5);
+      g.restore();
+    }
+    if (s.snow > 0 && !R.ground && k < 2) {
+      g.save(); g.beginPath(); g.rect(0, 0, W, H*R.base - H*R.amp*(1 - s.snow)); g.clip();
+      g.fillStyle = rgb(mix(P.snow[0], fog, R.depth*.6)); g.fill(path);
+      g.restore();
+    }
+    fogBand(H*R.base, s.fog*.6, fog);
+  });
+  if (nearTrees) {
+    const Lr = nearTrees, by = H*Lr.base, off = cam*Lr.par, trunk = rgb(P.trunk[0]);
+    g.fillStyle = rgb(mix(P.ground[0], fog, .05));
+    g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, by - H*.03 + Math.sin((x + off)*.005)*H*.025); g.lineTo(W, H); g.closePath(); g.fill();
+    for (const tr of Lr.trees) eachWrap(tr.x, off, tr.h*.5, x => drawTree(tr, x, by + H*.02, rgb(P.leaf[tr.ci]), trunk, t, null));
+  }
+  drawWisps(fog, s.fog, dt);
+}
+function drawCity(P, t, dt, s){
+  const fog = P.fog;
+  city.forEach((Lc,k) => {
+    const by = H*Lc.base, off = cam*Lc.par, col = rgb(mix(P.build[k], fog, Lc.depth));
+    for (const b of Lc.b) eachWrap(b.x, off, b.w, x => drawBuilding(b, x, by, col, P, k, t, s.signs));
+    if (k === 0) fogBand(by, s.fog*.7, fog);
+    if (k === 1) {
+      // elevated rail line and passing train
+      const ty = by - H*.02;
+      g.fillStyle = rgb(mix(P.build[2], fog, .25)); g.fillRect(0, ty, W, 4);
+      for (let x = ((-cam*Lc.par) % 70 + 70) % 70 - 70; x < W; x += 70) g.fillRect(x, ty, 4, by - ty + 2);
+      if (train) {
+        train.x += train.dir*train.v*dt;
+        for (let c = 0; c < 4; c++) {
+          const cx = train.x + c*76;
+          g.fillStyle = rgb(mix([210,215,220], P.build[2], .4 + P.dark*.4)); g.fillRect(cx, ty - 15, 72, 14);
+          g.fillStyle = P.dark > .2 ? `rgba(255,236,190,${.4 + .6*P.dark})` : rgb(P.glass[0], .7); g.fillRect(cx + 4, ty - 12, 64, 5);
+        }
+        if ((train.dir > 0 && train.x > W + 20) || (train.dir < 0 && train.x < -340)) train = null;
+      }
+      fogBand(by, s.fog*.5, fog);
+    }
+  });
+  // street
+  const ry = H*.885;
+  g.fillStyle = rgb(P.road[0]); g.fillRect(0, ry, W, H - ry);
+  g.fillStyle = rgb(mix(P.road[0], [230,230,220], .35)); for (let x = 10; x < W; x += 46) g.fillRect(x, H*.938, 22, 2);
+  for (let i = cars.length - 1; i >= 0; i--) {
+    const c = cars[i], y = c.dir > 0 ? H*.965 : H*.918, sc = c.dir > 0 ? 1 : .85;
+    c.x += c.dir*c.v*dt;
+    const front = c.x + c.dir*14*sc, back = c.x - c.dir*14*sc;
+    g.fillStyle = rgb(mix(hex(c.col), [10,10,14], P.dark*.75)); g.fillRect(c.x - 14*sc, y - 8*sc, 28*sc, 7*sc); g.fillRect(c.x - 8*sc, y - 12*sc, 16*sc, 5*sc);
+    if (P.dark > .1) {
+      const hg = g.createRadialGradient(front, y - 4*sc, 0, front, y - 4*sc, 26*sc);
+      hg.addColorStop(0, `rgba(255,245,215,${.9*P.dark})`); hg.addColorStop(1, 'rgba(255,245,215,0)');
+      g.fillStyle = hg; g.fillRect(front - 26*sc, y - 30*sc, 52*sc, 52*sc);
+      g.fillStyle = `rgba(255,60,50,${P.dark})`; g.fillRect(back - 1.5, y - 6*sc, 3, 2.5);
+      g.fillStyle = `rgba(255,235,200,${.18*P.dark})`; g.fillRect(front - 6, y + 2, 12, H - y);
+    }
+    if (c.x < -60 || c.x > W + 60) cars.splice(i,1);
+  }
+}
+function drawShore(P, t, dt, s){
+  const fog = P.fog, hz = H*.52, beach = H*.8, n = P.dark;
+  // far features
+  if (s.far === 'island') {
+    g.fillStyle = rgb(mix(P.leaf[0], fog, .6)); g.beginPath(); g.moveTo(W*.58, hz);
+    g.quadraticCurveTo(W*.66, hz - H*.035, W*.74, hz - H*.012); g.quadraticCurveTo(W*.8, hz - H*.03, W*.88, hz); g.closePath(); g.fill();
+  } else if (s.far === 'headland') {
+    g.fillStyle = rgb(mix(P.rock[0], fog, .55)); g.beginPath(); g.moveTo(0, hz);
+    for (let x = 0; x <= W*.55; x += 8) { const e = 1 - x/(W*.55); g.lineTo(x, hz - H*.09*e*(.75 + .25*Math.sin(x*.05))); }
+    g.lineTo(W*.55, hz); g.closePath(); g.fill();
+  } else if (s.far === 'iceberg') {
+    const ib = (x0, w, h) => { g.fillStyle = rgb(mix([244,248,252], fog, .25)); g.beginPath(); g.moveTo(x0, hz); g.lineTo(x0 + w*.15, hz - h*.6); g.lineTo(x0 + w*.3, hz - h*.55); g.lineTo(x0 + w*.45, hz - h); g.lineTo(x0 + w*.62, hz - h*.7); g.lineTo(x0 + w*.8, hz - h*.75); g.lineTo(x0 + w, hz); g.closePath(); g.fill();
+      g.fillStyle = rgb(mix([150,190,215], fog, .3), .6); g.beginPath(); g.moveTo(x0 + w*.45, hz - h); g.lineTo(x0 + w*.62, hz - h*.7); g.lineTo(x0 + w*.8, hz - h*.75); g.lineTo(x0 + w, hz); g.lineTo(x0 + w*.5, hz); g.closePath(); g.fill(); };
+    ib(W*.55, W*.22, H*.06); ib(W*.12, W*.1, H*.03); ib(W*.85, W*.08, H*.02);
+  } else if (s.far === 'skyline') {
+    const col = rgb(mix(P.build[1], fog, .45));
+    for (const b of skyline) drawBuilding(b, b.x, hz + 1, col, P, 0, t, false);
+  }
+  // water
+  const wg = g.createLinearGradient(0, hz, 0, beach + H*.04);
+  wg.addColorStop(0, rgb(mix(P.water[0], P.sky[1], .45))); wg.addColorStop(.45, rgb(P.water[1])); wg.addColorStop(1, rgb(P.water[2]));
+  g.fillStyle = wg; g.fillRect(0, hz, W, beach + H*.04 - hz);
+  fogBand(hz + 2, s.fog*.6, fog, .05);
+  // sun / moon glitter path
+  const sx = P.sunX*W, reflA = Math.min(1, P.sunA)*(.35 + .5*(1 - Math.abs(2*n - 1)) + .2*n);
+  for (let i = 0; i < 18; i++) {
+    const y = hz + 3 + (beach - hz)*Math.pow(i/18, 1.3), w = (6 + i*4)*(.55 + .45*Math.sin(t*2.2 + i*1.7));
+    g.fillStyle = rgb(P.sun, reflA*(1 - i/20)*.6); g.fillRect(sx - w/2 + Math.sin(t + i)*4, y, w, 1.6);
+  }
+  // swell lines
+  const lc = mix(P.water[0], [255,255,255], .35);
+  for (let i = 1; i < 18; i++) {
+    const yy = hz + (beach - hz)*Math.pow(i/18, 1.7), drift = (reduce ? 0 : t)*(6 + i*2), len = 8 + i*2;
+    g.fillStyle = rgb(lc, .12 + i*.012);
+    for (let j = 0; j < W/70 + 2; j++) { const x = ((j*70 + drift + i*37) % (W + 70)) - 35; g.fillRect(x, yy + Math.sin(t + j + i)*1.2, len, 1); }
+  }
+  // dhow on the water
+  if (s.near === 'dhow') {
+    dhowX += dt*(reduce ? 0 : 6); if (dhowX > W + 60) dhowX = -60;
+    const dy = hz + (beach - hz)*.32 + Math.sin(t*1.2)*1.5, sc = Math.min(1.2, W/600 + .4);
+    g.fillStyle = rgb(mix(P.trunk[0], fog, .2)); g.beginPath(); g.moveTo(dhowX - 26*sc, dy - 7*sc); g.lineTo(dhowX + 30*sc, dy - 9*sc); g.lineTo(dhowX + 20*sc, dy); g.lineTo(dhowX - 18*sc, dy); g.closePath(); g.fill();
+    g.fillRect(dhowX - 1, dy - 40*sc, 2, 33*sc);
+    g.fillStyle = rgb(mix(P.sand[0], fog, .15)); g.beginPath(); g.moveTo(dhowX + 1, dy - 40*sc); g.quadraticCurveTo(dhowX + 26*sc, dy - 22*sc, dhowX + 18*sc, dy - 10*sc); g.lineTo(dhowX + 1, dy - 10*sc); g.closePath(); g.fill();
+  }
+  for (const f of floes) {
+    f.x += f.v*dt*(reduce ? 0 : 1); if (f.x > W + f.w) f.x = -f.w;
+    const y = hz + (beach - hz)*f.f*f.f, sc = .4 + f.f;
+    g.fillStyle = rgb(mix([240,246,250], fog, .15*(1 - f.f))); g.beginPath(); g.ellipse(f.x, y, f.w*sc*.5, f.w*sc*.08, 0, 0, 6.2832); g.fill();
+    g.fillStyle = rgb(P.water[2], .35); g.fillRect(f.x - f.w*sc*.4, y + f.w*sc*.06, f.w*sc*.8, 1.5);
+  }
+  // surge cycle
+  waveT += dt;
+  if ((!playing || levels.waves < .02) && waveT > waveUp + waveDown + 1.2) surge(rand(1.8,2.6), rand(3,4.5));
+  const sg = waveT < waveUp ? (1 - Math.cos(Math.PI*waveT/waveUp))/2 : (1 + Math.cos(Math.PI*Math.min(1, (waveT - waveUp)/waveDown)))/2;
+  const shoreY = x => beach - sg*H*.045 + Math.sin(x*.012 + t*.6)*3 + Math.sin(x*.031 + 1)*2;
+  // breaker band
+  g.fillStyle = rgb(mix(P.water[0], [255,255,255], .5), .35);
+  g.beginPath(); g.moveTo(0, shoreY(0) - H*.02); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, shoreY(x) - H*.014 - Math.sin(x*.05 + t*2)*2); for (let x = W + 10; x >= 0; x -= 10) g.lineTo(x, shoreY(x)); g.closePath(); g.fill();
+  // sand
+  const sgd = g.createLinearGradient(0, beach - H*.05, 0, H);
+  sgd.addColorStop(0, rgb(mix(P.sand[1], P.water[2], .25))); sgd.addColorStop(.25, rgb(P.sand[1])); sgd.addColorStop(.6, rgb(P.sand[0]));
+  g.fillStyle = sgd; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, shoreY(x)); g.lineTo(W, H); g.closePath(); g.fill();
+  g.strokeStyle = `rgba(255,255,255,${.75 - n*.35})`; g.lineWidth = 2.5; g.beginPath(); for (let x = 0; x <= W + 10; x += 10) x ? g.lineTo(x, shoreY(x)) : g.moveTo(x, shoreY(x)); g.stroke();
+  // near
+  if (s.near === 'palm') {
+    const tc = rgb(P.trunk[0]), lc2 = rgb(mix(P.leaf[0], [0,0,0], .1));
+    [[.07,.52,-.6],[.93,.46,.7],[.84,.36,.4]].forEach(([fx, hh, bend], i) => drawTree({ type:'palm', h:H*hh, ph:i*2, bend }, W*fx, H*1.01, lc2, tc, t, null));
+    g.fillStyle = rgb(P.rock[1]); g.beginPath(); g.ellipse(W*.32, H*.93, 22, 10, 0, 0, 6.2832); g.ellipse(W*.36, H*.95, 14, 7, 0, 0, 6.2832); g.fill();
+  } else if (s.near === 'cliff') {
+    g.fillStyle = rgb(P.rock[0]); g.beginPath(); g.moveTo(0, H*.28);
+    const pts = [[.06,.3],[.12,.36],[.17,.38],[.22,.5],[.26,.58],[.33,.74],[.37,.86],[.34,1]];
+    pts.forEach(([x,y]) => g.lineTo(W*x*(W < 600 ? 1.2 : 1), H*y)); g.lineTo(0, H); g.closePath(); g.fill();
+    g.fillStyle = rgb(P.leaf[0], .9); g.beginPath(); g.moveTo(0, H*.28); g.lineTo(W*.06*(W < 600 ? 1.2 : 1), H*.3); g.lineTo(W*.12*(W < 600 ? 1.2 : 1), H*.36); g.lineTo(W*.1, H*.37); g.lineTo(0, H*.34); g.closePath(); g.fill();
+    g.fillStyle = rgb(P.rock[1]); g.beginPath(); g.ellipse(W*.62, H*.86, 34, 14, 0, 0, 6.2832); g.ellipse(W*.7, H*.9, 22, 9, 0, 0, 6.2832); g.ellipse(W*.9, H*.84, 28, 12, 0, 0, 6.2832); g.fill();
+  } else if (s.near === 'mangrove') {
+    const tc = rgb(P.trunk[0]), lcm = rgb(mix(P.leaf[0], [0,0,0], .08));
+    for (const m of mangroves) {
+      const by = beach + H*.01, h = m.h, sw = reduce ? 0 : Math.sin(t*.6 + m.x)*h*.01;
+      g.strokeStyle = tc; g.lineCap = 'round'; g.lineWidth = Math.max(1.2, h*.012);
+      for (let r = -4; r <= 4; r++) { g.beginPath(); g.moveTo(m.x + r*h*.008, by - h*.3); g.quadraticCurveTo(m.x + r*h*.06, by - h*.32, m.x + r*h*.1, by + h*.03); g.stroke(); }
+      g.lineWidth = Math.max(2, h*.03); g.beginPath(); g.moveTo(m.x, by - h*.28); g.lineTo(m.x + sw, by - h*.6); g.stroke();
+      g.fillStyle = lcm; g.beginPath();
+      for (const b of m.blobs) { const bx = m.x + b.dx*h + sw, byy = by + b.dy*h, rr = b.rr*h; g.moveTo(bx + rr, byy); g.arc(bx, byy, rr, 0, 6.2832); }
+      g.fill();
+    }
+  } else if (s.near === 'ice') {
+    g.fillStyle = rgb(mix([235,242,248], fog, .05)); g.beginPath(); g.moveTo(0, H*.86); g.lineTo(W*.14, H*.83); g.lineTo(W*.26, H*.88); g.lineTo(W*.22, H); g.lineTo(0, H); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(W, H*.84); g.lineTo(W*.8, H*.87); g.lineTo(W*.86, H); g.lineTo(W, H); g.closePath(); g.fill();
+  } else if (s.near === 'dhow') {
+    g.fillStyle = rgb(P.rock[1]); g.beginPath(); g.ellipse(W*.12, H*.95, 30, 9, 0, 0, 6.2832); g.fill();
+  }
+}
+function ignite(d){ if (!skyw || !skyw.balloons.length) return; const b = skyw.balloons[(Math.random()*skyw.balloons.length)|0]; b.flame = d || rand(1.2,2.4); }
+function drawBalloon(b, P, fog, n, t, dt){
+  b.x += b.v*dt*(reduce ? 0 : 1); if (b.x > W + b.s*2) b.x = -b.s*2; b.flame = Math.max(0, b.flame - dt);
+  const r = b.s, x = b.x, y = b.y + Math.sin(t*.5 + b.ph)*4, d = b.depth, L = P.balloon.length;
+  const c1 = mix(P.balloon[b.c % L], fog, d), c2 = mix(P.balloon[(b.c + 2) % L], fog, d);
+  g.save(); g.beginPath(); g.moveTo(x - r, y); g.arc(x, y, r, Math.PI, 0);
+  g.bezierCurveTo(x + r, y + r*.7, x + r*.35, y + r*1.15, x + r*.25, y + r*1.35); g.lineTo(x - r*.25, y + r*1.35);
+  g.bezierCurveTo(x - r*.35, y + r*1.15, x - r, y + r*.7, x - r, y); g.closePath();
+  g.fillStyle = rgb(c1); g.fill(); g.clip();
+  g.fillStyle = rgb(c2); g.fillRect(x - r*.6, y - r, r*.32, r*2.5); g.fillRect(x + r*.28, y - r, r*.32, r*2.5);
+  const sh = g.createLinearGradient(x - r, 0, x + r, 0); sh.addColorStop(0, 'rgba(255,255,255,.18)'); sh.addColorStop(1, 'rgba(0,0,0,.25)');
+  g.fillStyle = sh; g.fillRect(x - r, y - r, 2*r, 2.5*r);
+  if (b.flame > 0 && n > .3) { g.fillStyle = `rgba(255,170,80,${Math.min(1,b.flame)*.45*n})`; g.fillRect(x - r, y - r, 2*r, 2.5*r); }
+  g.restore();
+  g.strokeStyle = rgb(mix([60,45,35], fog, d)); g.lineWidth = 1; g.beginPath();
+  g.moveTo(x - r*.25, y + r*1.35); g.lineTo(x - r*.17, y + r*1.65); g.moveTo(x + r*.25, y + r*1.35); g.lineTo(x + r*.17, y + r*1.65); g.stroke();
+  g.fillStyle = rgb(mix([110,80,50], fog, d)); g.fillRect(x - r*.19, y + r*1.65, r*.38, r*.26);
+  if (b.flame > 0) {
+    const fa = Math.min(1, b.flame)*(.6 + .4*Math.random()), fr = r*(.5 + n*.9);
+    const fg = g.createRadialGradient(x, y + r*1.45, 0, x, y + r*1.45, fr);
+    fg.addColorStop(0, `rgba(255,200,100,${fa})`); fg.addColorStop(1, 'rgba(255,140,40,0)');
+    g.fillStyle = fg; g.fillRect(x - fr, y + r*1.45 - fr, fr*2, fr*2);
+  }
+}
+function cloudBank(cl, off, P, fog, golden, dark){
+  const by = H*cl.base, k = cl.base > .85 ? 2 : cl.base > .7 ? 1 : 0, maxR = H*.13;
+  const hi = mix(mix(P.cloud[0], P.sun, .3*golden), fog, cl.depth), lo = mix(mix(P.cloud[Math.min(2, k + 1)], [0,0,0], dark ? .25 : 0), fog, cl.depth);
+  const gr = g.createLinearGradient(0, by - maxR*1.4, 0, by + maxR*.6); gr.addColorStop(0, rgb(hi)); gr.addColorStop(1, rgb(lo));
+  g.fillStyle = gr; g.beginPath();
+  for (const p of cl.puffs) eachWrap(p.x, off, p.r, x => { g.moveTo(x + p.r, by + p.dy); g.arc(x, by + p.dy, p.r, 0, 6.2832); });
+  g.rect(0, by, W, H - by); g.fill();
+}
+function drawSkyWorld(P, t, dt, s){
+  const fog = P.fog, n = P.dark, golden = 1 - Math.abs(2*n - 1), sw = skyw;
+  if (!sw) return;
+  // milky way
+  if (s.milky && P.star > .05) {
+    const x0 = -W*.1, y0 = H*.78, x1 = W*1.1, y1 = H*.02, nx = -(y1 - y0), ny = x1 - x0, nl = Math.hypot(nx, ny), ux = nx/nl, uy = ny/nl;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (let i=0;i<9;i++) { const u = i/8, cx = x0 + (x1 - x0)*u, cy = y0 + (y1 - y0)*u, rr = H*(.12 + .06*Math.sin(i*1.3));
+      const gg = g.createRadialGradient(cx, cy, 0, cx, cy, rr); gg.addColorStop(0, `rgba(205,195,255,${.12*P.star})`); gg.addColorStop(1, 'rgba(200,190,255,0)'); g.fillStyle = gg; g.fillRect(cx - rr, cy - rr, rr*2, rr*2); }
+    for (const p of sw.milky) { const x = x0 + (x1 - x0)*p.u + ux*p.v*H, y = y0 + (y1 - y0)*p.u + uy*p.v*H; g.fillStyle = `rgba(240,236,255,${P.star*(.4 + .4*Math.sin(t + p.ph*4))})`; g.fillRect(x, y, p.s, p.s); }
+    g.restore();
+  }
+  // meteors
+  if (P.star > .5 && !reduce && Math.random() < dt*.22) sw.meteors.push({ x:rand(W*.1, W*.9), y:rand(0, H*.3), vx:(Math.random() < .5 ? -1 : 1)*rand(260,380), vy:rand(120,180), life:.8 });
+  for (let i = sw.meteors.length - 1; i >= 0; i--) { const m = sw.meteors[i]; m.x += m.vx*dt; m.y += m.vy*dt; m.life -= dt;
+    const gm = g.createLinearGradient(m.x, m.y, m.x - m.vx*.18, m.y - m.vy*.18); gm.addColorStop(0, `rgba(255,255,255,${Math.max(0, m.life)*P.star})`); gm.addColorStop(1, 'rgba(255,255,255,0)');
+    g.strokeStyle = gm; g.lineWidth = 1.5; g.beginPath(); g.moveTo(m.x, m.y); g.lineTo(m.x - m.vx*.18, m.y - m.vy*.18); g.stroke(); if (m.life <= 0) sw.meteors.splice(i,1); }
+
+  if (s.ground === 'peaks') {
+    [[.28,.68,.17,.26],[.7,.68,.24,.34],[.92,.7,.1,.12]].forEach(([cx, bf, hw, hf]) => {
+      cx *= W; const base = H*bf, h = H*hf, w = W*hw, p = new Path2D();
+      p.moveTo(cx - w, base); p.lineTo(cx - w*.35, base - h*.6); p.lineTo(cx - w*.1, base - h*.92); p.lineTo(cx, base - h); p.lineTo(cx + w*.18, base - h*.82); p.lineTo(cx + w*.5, base - h*.5); p.lineTo(cx + w, base); p.closePath();
+      g.fillStyle = rgb(mix(P.rock[0], fog, .45)); g.fill(p);
+      g.save(); g.beginPath(); g.rect(0, 0, W, base - h*.55); g.clip(); g.fillStyle = rgb(mix(P.snow[0], fog, .25)); g.fill(p); g.restore();
+    });
+    sw.clouds.forEach(cl => cloudBank(cl, cam*cl.par*3, P, fog, golden, false));
+  } else if (s.ground === 'hills') {
+    const hill = (base, amp, f, ph, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, H*base - Math.sin(x*f + ph)*H*amp - Math.sin(x*f*2.3 + ph)*H*amp*.4); g.lineTo(W, H); g.closePath(); g.fill(); };
+    hill(.7, .03, .006, 1, rgb(mix(P.rock[0], fog, .55)));
+    for (const b of sw.balloons) if (b.depth > .3) drawBalloon(b, P, fog, n, t, dt);
+    fogBand(H*.74, s.fog*.6, fog);
+    g.fillStyle = rgb(mix(P.rock[1], fog, .25));
+    for (const c of sw.cones) { const by = H*.82; g.beginPath(); g.moveTo(c.x - c.w, by); g.lineTo(c.x - c.w*.35, by - c.h); g.arc(c.x, by - c.h, c.w*.4, Math.PI, 0); g.lineTo(c.x + c.w, by); g.closePath(); g.fill(); }
+    hill(.82, .025, .009, 3, rgb(mix(P.rock[1], fog, .25)));
+    hill(.93, .03, .005, 5, rgb(P.rock[2]));
+    for (const b of sw.balloons) if (b.depth <= .3) drawBalloon(b, P, fog, n, t, dt);
+    sw.flameT -= dt; if (sw.flameT <= 0) { sw.flameT = rand(1.5, 4); if (!playing || levels.burner < .02) ignite(); }
+  } else if (s.ground === 'plains') {
+    [[.25,.32,.5],[.72,.42,.62]].forEach(([fx, fw, fh]) => {
+      const bx = W*fx, tw = W*fw*(W < 600 ? 1.3 : 1), th = H*fh, by = H*.74;
+      const grd = g.createLinearGradient(0, by - th, 0, by);
+      grd.addColorStop(0, rgb(mix(P.cloud[0], P.sun, .25*golden))); grd.addColorStop(.6, rgb(P.cloud[1])); grd.addColorStop(1, rgb(P.cloud[2]));
+      g.fillStyle = grd; g.beginPath();
+      for (let i=0;i<10;i++) { const f = i/9, y = by - th*f*.86, rr = tw*(.24 - f*.05 + (f > .7 ? (f - .7)*.5 : 0))*(1 + .15*Math.sin(i*2.1 + t*.05)), xx = bx + Math.sin(i*1.7)*tw*.07; g.moveTo(xx + rr, y); g.arc(xx, y, rr, 0, 6.2832); }
+      g.moveTo(bx + tw*.8, by - th); g.ellipse(bx + tw*.15, by - th*.97, tw*.9, th*.09, 0, 0, 6.2832); g.fill();
+      if (flashA > 0) { g.fillStyle = `rgba(220,228,255,${flashA*.25})`; g.fill(); }
+      const rs = g.createLinearGradient(0, by, 0, H*.9); rs.addColorStop(0, rgb(P.cloud[2], .6)); rs.addColorStop(1, rgb(P.cloud[2], 0));
+      g.fillStyle = rs; g.beginPath(); g.moveTo(bx - tw*.22, by); g.lineTo(bx + tw*.22, by); g.lineTo(bx + tw*.12, H*.9); g.lineTo(bx - tw*.32, H*.9); g.closePath(); g.fill();
+    });
+    g.fillStyle = rgb(mix(P.rock[0], fog, .2)); g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, H*.86 - Math.sin(x*.004 + 1)*H*.01); g.lineTo(W, H); g.closePath(); g.fill();
+    sw.boltT -= dt; if (sw.boltT <= 0) { sw.boltT = rand(5, 12); if (!playing || levels.thunder < .02) lightning(); }
+  } else if (s.ground === 'dunes') {
+    const dune = (base, amp, f, ph, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, H*base - Math.abs(Math.sin(x*f + ph))*H*amp); g.lineTo(W, H); g.closePath(); g.fill(); };
+    dune(.8, .05, .004, .5, rgb(mix(P.rock[0], fog, .35)));
+    dune(.9, .05, .003, 2, rgb(P.rock[1]));
+    drawTree({ type:'acacia', h:H*.2, ph:0, bend:0, blobs:[] }, W*.76, H*.89, rgb(mix(P.leaf[0], [0,0,0], .2)), rgb(P.trunk[0]), t, null);
+  } else if (s.ground === 'lake') {
+    const top = H*.69, bot = H*.83, hR = bot - top;
+    g.fillStyle = rgb(mix(P.snow[0], fog, .5)); g.beginPath(); g.moveTo(0, top); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, top - H*.03 - Math.sin(x*.005 + 2)*H*.02); g.lineTo(W, top); g.closePath(); g.fill();
+    g.fillStyle = rgb(mix(P.leaf[0], fog, .3)); g.beginPath(); g.moveTo(0, top);
+    sw.pines.forEach((hh, i) => { const x = i*6; g.lineTo(x, top - 2); g.lineTo(x + 3, top - 4 - hh*H*.028); g.lineTo(x + 6, top - 2); }); g.lineTo(W, top); g.closePath(); g.fill();
+    try {
+      g.save(); g.translate(0, top*2); g.scale(1, -1); g.globalAlpha = .55;
+      g.drawImage(cv, 0, (top - hR*1.6)*DPR, W*DPR, hR*1.6*DPR, 0, top - hR, W, hR);
+      g.restore();
+    } catch(e) { g.restore(); }
+    g.fillStyle = rgb(P.water[0], .35); g.fillRect(0, top, W, hR);
+    g.fillStyle = 'rgba(255,255,255,.06)'; for (let i=0;i<10;i++) g.fillRect(((i*97 + t*6) % (W + 40)) - 20, top + hR*(i/10), 30 + i*4, 1);
+    g.fillStyle = rgb(P.snow[0]); g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) g.lineTo(x, bot + Math.sin(x*.006)*H*.012); g.lineTo(W, H); g.closePath(); g.fill();
+  }
+}
+function fogBand(by, a, fog, span){
+  span = span || .14;
+  const fg = g.createLinearGradient(0, by - H*span, 0, by + H*.06);
+  fg.addColorStop(0, rgb(fog,0)); fg.addColorStop(.7, rgb(fog, a)); fg.addColorStop(1, rgb(fog, 0));
+  g.fillStyle = fg; g.fillRect(0, by - H*span, W, H*(span + .06));
+}
+function drawWisps(fog, strength, dt){
+  for (const w of wisps) {
+    w.x += w.v*dt*(reduce ? 0 : 1); if (w.x > W + w.rx) w.x = -w.rx; if (w.x < -w.rx) w.x = W + w.rx;
+    const wg = g.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.rx);
+    wg.addColorStop(0, rgb(fog, strength*.3)); wg.addColorStop(1, rgb(fog, 0));
+    g.save(); g.translate(w.x, w.y); g.scale(1, w.ry/w.rx); g.translate(-w.x, -w.y);
+    g.fillStyle = wg; g.beginPath(); g.arc(w.x, w.y, w.rx, 0, 6.2832); g.fill(); g.restore();
+  }
+}
+
+let last = performance.now(), birdTimer = 4, carTimer = 1, trainTimer = 12, raf = 0;
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now;
+  const t = now/1000, s = SC[si];
+  lerpPal(cur, tgt, Math.min(1, dt*1.6));
+  const P = cur, n = P.dark, golden = 1 - Math.abs(2*n - 1);
+  cam += dt*(reduce ? 0 : 7);
+
+  // sky
+  const sk = g.createLinearGradient(0, 0, 0, H*.75);
+  sk.addColorStop(0, rgb(P.sky[0])); sk.addColorStop(1, rgb(P.sky[1]));
+  g.fillStyle = sk; g.fillRect(0, 0, W, H);
+  if (P.star > .03) {
+    const sa = Math.min(1, P.star*(s.cloudy ? .25 : s.world === 'sky' ? 1.25 : 1));
+    for (const st of stars) { g.fillStyle = `rgba(235,240,255,${sa*(.45 + .55*Math.sin(t*1.3 + st.ph*3))})`; g.fillRect(st.x*W, st.y*H, st.s, st.s); }
+  }
+  if (s.aurora && P.star > .05) {
+    const sky = s.world === 'sky', ab = sky ? .22 : .12, ak = (sky ? 2.6 : 1.5)*P.star;
+    const curve = (b, x, j) => H*(ab + b*.075) + Math.sin(x*.004 + t*.25 + b*2)*H*.05 + Math.sin(x*.011 - t*.4)*H*.012 + j;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (let b=0;b<3;b++){
+      const col = b === 1 ? '170,120,255' : '90,255,175', base = H*(ab + b*.075), drop = H*(sky ? .16 : .1);
+      const cg = g.createLinearGradient(0, base - H*.06, 0, base + drop + H*.05);
+      cg.addColorStop(0, `rgba(${col},0)`); cg.addColorStop(.25, `rgba(${col},${Math.min(.3, .09*ak)})`); cg.addColorStop(.55, `rgba(${col},${Math.min(.12, .035*ak)})`); cg.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = cg; g.beginPath();
+      for (let x=-10; x<=W+10; x+=14) x < 0 ? g.moveTo(x, curve(b,x,0)) : g.lineTo(x, curve(b,x,0));
+      for (let x=W+10; x>=-10; x-=14) g.lineTo(x, curve(b,x,drop + Math.sin(x*.05 + t)*H*.01));
+      g.closePath(); g.fill();
+      for (let j=0;j<10;j++){
+        g.strokeStyle = `rgba(${col},${Math.min(.35, .05*ak)*(1 - j/10)})`;
+        g.lineWidth = 5; g.beginPath();
+        for (let x=-10; x<=W+10; x+=14){ const y = curve(b, x, j*4); x < 0 ? g.moveTo(x,y) : g.lineTo(x,y); }
+        g.stroke();
+      }
+    }
+    g.restore();
+  }
+  {
+    const sx = W*P.sunX, sy = H*P.sunY, r = P.sunR, a = P.sunA, gr = r*(7 + golden*5);
+    const gl = g.createRadialGradient(sx, sy, r*.5, sx, sy, gr);
+    gl.addColorStop(0, rgb(P.sun, (.55 + golden*.25)*a)); gl.addColorStop(1, rgb(P.sun, 0));
+    g.fillStyle = gl; g.fillRect(sx - gr, sy - gr, gr*2, gr*2);
+    g.fillStyle = rgb(P.sun, a); g.beginPath(); g.arc(sx, sy, r, 0, 6.2832); g.fill();
+    if (n > .8) { g.fillStyle = rgb(mix(P.sky[0], P.sky[1], Math.min(1, P.sunY/.75)), (n - .8)*5); g.beginPath(); g.arc(sx + r*.45, sy - r*.2, r*.9, 0, 6.2832); g.fill(); }
+  }
+  if (bolt && bolt.life > 0) { g.strokeStyle = `rgba(245,248,255,${Math.min(1, bolt.life*4)})`; g.lineWidth = 2; g.beginPath(); bolt.pts.forEach(([x,y],i) => i ? g.lineTo(x,y) : g.moveTo(x,y)); g.stroke(); bolt.life -= dt; }
+
+  // birds / gulls / eagles
+  const bcol = s.world === 'shore' ? rgb(mix([248,248,242], [90,95,105], n), .9) : rgb(mix([30,34,32], [10,12,14], n), .8);
+  g.strokeStyle = bcol; g.lineWidth = s.world === 'mountain' ? 2 : 1.6; g.lineCap = 'round';
+  for (let i = birds.length - 1; i >= 0; i--) {
+    const b = birds[i]; b.x += b.vx*dt; b.ph += dt*(b.glide ? 3 : 11); b.y += Math.sin(b.ph*.3)*.15;
+    const w = b.glide ? b.s*(.15 + .1*Math.sin(b.ph)) : Math.sin(b.ph)*b.s*.7;
+    g.beginPath(); g.moveTo(b.x - b.s, b.y - w); g.quadraticCurveTo(b.x - b.s*.4, b.y - b.s*.25, b.x, b.y); g.quadraticCurveTo(b.x + b.s*.4, b.y - b.s*.25, b.x + b.s, b.y - w); g.stroke();
+    if (b.x < -60 || b.x > W + 60) birds.splice(i,1);
+  }
+  birdTimer -= dt; if (birdTimer <= 0) { birdTimer = rand(7,14); spawnBird(1 + (Math.random()*3|0)); }
+  if (s.world === 'city') {
+    carTimer -= dt; if (carTimer <= 0) { carTimer = rand(.6, 3.2)/(.4 + (levels.traffic + levels.cars)); if (!playing || levels.cars < .02) spawnCar(); }
+    trainTimer -= dt; if (trainTimer <= 0) { trainTimer = rand(25,50); if (!playing || levels.train < .02) spawnTrain(); }
+  }
+
+  if (s.world === 'forest') drawForest(P, t, dt, s);
+  else if (s.world === 'mountain') drawMountain(P, t, dt, s);
+  else if (s.world === 'city') drawCity(P, t, dt, s);
+  else if (s.world === 'shore') drawShore(P, t, dt, s);
+  else drawSkyWorld(P, t, dt, s);
+
+  // weather + particles
+  const want = Math.round(levels.rain*Math.min(320, W*H/1800));
+  while (rain.length < want) rain.push({ x:Math.random()*(W + 100), y:Math.random()*-H, v:rand(600,900), l:rand(10,22) });
+  if (rain.length > want) rain.length = want;
+  if (rain.length) {
+    g.strokeStyle = rgb(mix([210,225,235],[140,160,175],n), .45); g.lineWidth = 1; g.beginPath();
+    for (const d of rain) { d.y += d.v*dt; d.x -= d.v*dt*.12; if (d.y > H) { d.y = rand(-60,0); d.x = Math.random()*(W + 100); } g.moveTo(d.x, d.y); g.lineTo(d.x + d.l*.12, d.y - d.l); }
+    g.stroke();
+  }
+  if (snow.length) {
+    g.fillStyle = 'rgba(248,250,255,.85)'; g.beginPath();
+    for (const p of snow) { p.y += p.v*dt; p.x += Math.sin(t + p.ph)*12*dt - 6*dt; if (p.y > H) { p.y = -5; p.x = Math.random()*W; } if (p.x < -5) p.x = W + 5; g.moveTo(p.x + p.r, p.y); g.arc(p.x, p.y, p.r, 0, 6.2832); }
+    g.fill();
+  }
+  for (const l of leaves) {
+    l.x += (l.vx + Math.sin(t + l.a)*15)*dt; l.y += l.vy*dt; l.a += l.va*dt;
+    if (l.y > H + 10) { l.y = -10; l.x = Math.random()*W - 60; } if (l.x > W + 10) l.x = -10;
+    g.save(); g.translate(l.x, l.y); g.rotate(l.a); g.fillStyle = rgb(P.leaf[l.c] || P.leaf[0], .95);
+    g.beginPath(); g.ellipse(0, 0, l.s, l.s*.45*Math.abs(Math.cos(l.a*1.5)) + .6, 0, 0, 6.2832); g.fill(); g.restore();
+  }
+  if (motes.length && n < .95) {
+    const mc = s.fx === 'dust' ? '255,225,180' : '255,248,210';
+    for (const m of motes) { m.y -= m.v*dt; m.x += Math.sin(t*.6 + m.ph)*8*dt; if (m.y < H*.3) { m.y = H; m.x = Math.random()*W; }
+      g.fillStyle = `rgba(${mc},${(1 - n)*(.35 + .35*Math.sin(t*2 + m.ph))})`; g.beginPath(); g.arc(m.x, m.y, m.r, 0, 6.2832); g.fill(); }
+  }
+  if (flashA > 0) { g.fillStyle = `rgba(225,232,255,${flashA*.3})`; g.fillRect(0, 0, W, H); flashA = Math.max(0, flashA - dt*2.2); }
+  g.fillStyle = vignette; g.fillRect(0, 0, W, H);
+
+  if (analyser && playing) {
+    analyser.getByteTimeDomainData(abuf); let sum = 0;
+    for (let i=0;i<abuf.length;i++){ const v = (abuf[i] - 128)/128; sum += v*v; }
+    ringEl.style.transform = `scale(${1 + Math.min(.35, Math.sqrt(sum/abuf.length)*2.2)})`;
+  } else ringEl.style.transform = 'scale(1)';
+  if (pipOn) drawMini();
+  if (!hiddenLoop) raf = requestAnimationFrame(frame);
+}
+let hiddenLoop = false, hiddenT = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    cancelAnimationFrame(raf);
+    if (pipOn) { hiddenLoop = true; clearInterval(hiddenT); hiddenT = setInterval(() => frame(performance.now()), 70); }
+  } else { hiddenLoop = false; clearInterval(hiddenT); last = performance.now(); raf = requestAnimationFrame(frame); }
+});
+
+/* ---- Mini player (picture-in-picture) and lock-screen artwork ---- */
+let pipOn = false;
+const mini = document.createElement('canvas'); mini.width = 480; mini.height = 270; const mg = mini.getContext('2d');
+function cropFrom(dg, w, h, centerY){
+  const sh = Math.min(cv.height, cv.width*h/w), sw = sh*w/h;
+  const sy = Math.max(0, Math.min(cv.height - sh, cv.height*centerY - sh/2)), sx = Math.max(0, (cv.width - sw)/2);
+  dg.drawImage(cv, sx, sy, Math.min(cv.width, sw), sh, 0, 0, w, h);
+}
+function drawMini(){
+  cropFrom(mg, 480, 270, .6);
+  const gr = mg.createLinearGradient(0, 170, 0, 270); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.6)');
+  mg.fillStyle = gr; mg.fillRect(0, 170, 480, 100);
+  const Lc = li >= 0 ? LOCS[li] : null;
+  mg.fillStyle = '#fff'; mg.font = '26px "Young Serif", Georgia, serif'; mg.fillText(Lc ? Lc.name : SC[si].name, 18, 236);
+  mg.font = '14px "JetBrains Mono", monospace'; mg.fillStyle = 'rgba(255,255,255,.8)';
+  mg.fillText(`${WORLDS[world].name} · ${PHASES.find(p => p.id === phase).name}${playing ? '' : ' · paused'}`, 18, 258);
+}
+let artURL = '', artKey = '', artT = 0;
+function refreshArtwork(){
+  const key = `${si}|${phase}|${li}`; if (key === artKey) return; artKey = key;
+  clearTimeout(artT);
+  artT = setTimeout(() => {
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    cropFrom(c.getContext('2d'), 512, 512, .55);
+    try { c.toBlob(b => { if (!b) return; if (artURL) URL.revokeObjectURL(artURL); artURL = URL.createObjectURL(b); updateMediaSession(); }, 'image/png'); } catch(e) {}
+  }, 1400);
+}
+function updateMediaSession(){
+  if (!('mediaSession' in navigator)) return;
+  try {
+    const Lc = li >= 0 ? LOCS[li] : null, s = SC[si];
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: Lc ? Lc.name : s.name,
+      artist: `${WORLDS[world].name} · ${PHASES.find(p => p.id === phase).name}`,
+      album: 'Digi Earth',
+      artwork: artURL ? [{ src: artURL, sizes: '512x512', type: 'image/png' }] : []
+    });
+    navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+  } catch(e) {}
+}
+function stepScene(d){
+  const list = SC.map((s,i) => i).filter(i => SC[i].world === world), k = list.indexOf(si);
+  li = -1; store.set('de.loc', ''); setScene(list[(k + d + list.length) % list.length]);
+}
+if ('mediaSession' in navigator) {
+  const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch(e) {} };
+  set('play', () => play()); set('pause', () => pause()); set('stop', () => pause());
+  set('nexttrack', () => stepScene(1)); set('previoustrack', () => stepScene(-1));
+}
+const pipVideo = document.getElementById('pipVideo');
+const pipSupported = !!(document.pictureInPictureEnabled && pipVideo.requestPictureInPicture && mini.captureStream);
+async function togglePip(){
+  try {
+    if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
+    if (!pipVideo.srcObject) pipVideo.srcObject = mini.captureStream(15);
+    pipOn = true; drawMini();
+    await pipVideo.play();
+    await pipVideo.requestPictureInPicture();
+  } catch(e) {
+    pipOn = !!document.pictureInPictureElement;
+    toast('The mini player is not available in this browser or view');
+  }
+}
+pipVideo.addEventListener('enterpictureinpicture', () => { pipOn = true; document.getElementById('pipBtn').setAttribute('aria-pressed', 'true'); });
+pipVideo.addEventListener('leavepictureinpicture', () => { pipOn = false; document.getElementById('pipBtn').setAttribute('aria-pressed', 'false'); });
+
+/* ---------- Audio engine (every sound is synthesised live) ---------- */
+const SCALE = { hum:.3, burner:.55, wind:.9, rain:.55, stream:.55, birds:.42, crickets:.08, frogs:.3, owl:.45, thunder:1.1, waves:.85, gulls:.32, traffic:.7, cars:.6, train:.8, bells:.35 };
+const levels = {}; ALL.forEach(id => levels[id] = 0);
+let masterVol = .8;
+let ctx = null, master = null, analyser = null, abuf = null, B = {}, ch = {}, playing = false, pauseT = 0, schedT = 0, wakeLock = null;
+const S = {}, sy = {}, rl = {};
+let mediaDest = null, viaElement = false;
+const bgAudio = document.getElementById('bgAudio');
+async function startBgAudio(){
+  if (!mediaDest || viaElement || NATIVE) return; // the Android app keeps sound alive natively
+  try {
+    if (!bgAudio.srcObject) bgAudio.srcObject = mediaDest.stream;
+    await bgAudio.play();
+    setTimeout(() => {
+      if (!bgAudio.paused && bgAudio.currentTime > 0 && playing && !viaElement) {
+        try { analyser.disconnect(ctx.destination); viaElement = true; } catch(e) {}
+      }
+    }, 700);
+  } catch(e) {}
+}
+bgAudio.addEventListener('pause', () => {
+  if (viaElement) { try { analyser.connect(ctx.destination); } catch(e) {} viaElement = false; }
+  if (playing && document.hidden) pause();
+});
+const lvl = id => Math.pow(levels[id], 1.5)*SCALE[id];
+
+/* ---- Original recordings: seamless loops published with the page ---- */
+let srcMode = store.get('de.src') === 'real' ? 'real' : 'synth';
+const LOOPS = { wind:12.5, rain:45, stream:45, birds:45, crickets:45, thunder:23, waves:45, boat:38, frogs:45, gulls:40, cows:45, traffic:37, cars:45, train:50 };
+const RG = { hum:.3, burner:.4, wind:.55, rain:.5, stream:.5, birds:.5, crickets:.4, frogs:.4, owl:.6, thunder:.6, waves:.6, gulls:.45, traffic:.5, cars:.5, train:.5, bells:.45 };
+const bufs = {}, decoded = {}, realSrc = {};
+let loadMsg = '';
+const realFile = id => id === 'bells' ? (world === 'shore' ? 'boat' : world === 'sky' ? null : 'cows') : id;
+const canReal = id => { const f = realFile(id); return !!f && (f === 'owl' || f in LOOPS); };
+const hasReal = id => !!ctx && srcMode === 'real' && (id === 'owl' ? !!decoded.owl : !!realSrc[id]);
+function loadBuf(f){
+  if (!bufs[f]) bufs[f] = fetch('sounds/' + f + '.mp3').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+    .then(a => new Promise((res, rej) => ctx.decodeAudioData(a, res, rej))).then(b => (decoded[f] = b))
+    .catch(e => { delete bufs[f]; throw e; });
+  return bufs[f];
+}
+function applyMode(id){
+  if (!ctx) return;
+  const r = hasReal(id), now = ctx.currentTime;
+  sy[id].gain.setTargetAtTime(r ? 0 : 1, now, .5);
+  rl[id].gain.setTargetAtTime(r ? RG[id]/SCALE[id] : 0, now, .5);
+}
+async function syncReal(){
+  if (!ctx) return;
+  const ids = WORLDS[world].sounds.map(x => x[0]).filter(canReal);
+  ALL.forEach(id => {
+    const cur = realSrc[id];
+    if (cur && (srcMode !== 'real' || !ids.includes(id) || cur.file !== realFile(id))) { try { cur.node.stop(ctx.currentTime + 1.5); } catch(e){} delete realSrc[id]; }
+  });
+  ALL.forEach(applyMode);
+  if (srcMode !== 'real') { loadMsg = ''; renderCount(); return; }
+  let done = 0, failed = 0;
+  const upd = () => { loadMsg = done + failed < ids.length ? `Loading recordings ${done}/${ids.length}` : ''; renderCount(); };
+  upd();
+  await Promise.all(ids.map(async id => {
+    const file = realFile(id);
+    try {
+      const buf = await loadBuf(file); done++;
+      if (srcMode !== 'real' || realFile(id) !== file || !WORLDS[world].sounds.some(x => x[0] === id)) return;
+      if (id !== 'owl' && !realSrc[id]) {
+        const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = .5; s.loopEnd = .5 + LOOPS[file];
+        s.connect(rl[id]); s.start(0, .5 + Math.random()*LOOPS[file]); realSrc[id] = { file, node:s };
+      }
+    } catch(e) { failed++; }
+    applyMode(id); upd();
+  }));
+  if (failed && srcMode === 'real') toast(failed === ids.length ? 'Recordings could not load here, so electronic sound is playing' : `${failed} recording${failed > 1 ? 's' : ''} could not load; those layers stay electronic`);
+}
+
+function noise(type){
+  const n = ctx.sampleRate*5, b = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c=0;c<2;c++){
+    const d = b.getChannelData(c); let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,lastv=0;
+    for (let i=0;i<n;i++){
+      const w = Math.random()*2 - 1;
+      if (type === 'white') d[i] = w*.5;
+      else if (type === 'pink') { b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6=w*.115926; }
+      else { lastv = (lastv + .02*w)/1.02; d[i] = lastv*3.5; }
+    }
+    const f = 1024; for (let i=0;i<f;i++){ d[i] *= i/f; d[n-1-i] *= i/f; }
+  }
+  return b;
+}
+const biq = (type,f,q) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
+const gain = v => { const x = ctx.createGain(); x.gain.value = v; return x; };
+const loop = buf => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.start(0, Math.random()*4); return s; };
+const osc = (type,f) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.start(); return o; };
+function lfo(f, depth, param, type){ const o = osc(type || 'sine', f), d = gain(depth); o.connect(d); d.connect(param); return o; }
+function pan(p, dest){ if (!ctx.createStereoPanner) return dest; const n = ctx.createStereoPanner(); n.pan.value = p; n.connect(dest); return n; }
+function env(t, peak, a, d){ const e = ctx.createGain(); e.gain.setValueAtTime(.0001, t); e.gain.exponentialRampToValueAtTime(peak, t + a); e.gain.exponentialRampToValueAtTime(.0001, t + a + d); return e; }
+
+function initAudio(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return false;
+  ctx = new AC();
+  master = gain(0);
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3;
+  analyser = ctx.createAnalyser(); analyser.fftSize = 512; abuf = new Uint8Array(analyser.fftSize);
+  master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
+  try { if (ctx.createMediaStreamDestination) { mediaDest = ctx.createMediaStreamDestination(); analyser.connect(mediaDest); } } catch(e) { mediaDest = null; }
+  B = { white:noise('white'), pink:noise('pink'), brown:noise('brown') };
+  ALL.forEach(id => { ch[id] = gain(lvl(id)); ch[id].connect(master); sy[id] = gain(1); sy[id].connect(ch[id]); rl[id] = gain(0); rl[id].connect(ch[id]); });
+  { const lp = biq('lowpass', 420, .8), a = gain(.7); loop(B.brown).connect(lp).connect(a).connect(sy.wind); lfo(.06, 260, lp.frequency); lfo(.11, .3, a.gain);
+    const bp = biq('bandpass', 900, 6), a2 = gain(.07); loop(B.pink).connect(bp).connect(a2).connect(sy.wind); lfo(.045, 350, bp.frequency); lfo(.09, .05, a2.gain); }
+  { loop(B.white).connect(biq('highpass', 1000, .7)).connect(biq('lowpass', 7500, .7)).connect(gain(.45)).connect(sy.rain);
+    loop(B.pink).connect(biq('lowpass', 500, .7)).connect(gain(.9)).connect(sy.rain); }
+  { S.bp1 = biq('bandpass', 750, .8); S.bp2 = biq('bandpass', 1900, 2); S.g2 = gain(.35);
+    loop(B.pink).connect(S.bp1).connect(gain(.9)).connect(sy.stream); loop(B.pink).connect(S.bp2).connect(S.g2).connect(sy.stream); }
+  [[4300, 2.2, -.4], [4680, 1.7, .5]].forEach(([f, r, p]) => { const am = gain(.5), gate = gain(.5); lfo(32, .5, am.gain, 'square'); lfo(r, .5, gate.gain, 'square'); osc('sine', f).connect(am).connect(gate).connect(pan(p, sy.crickets)); });
+  { const a = gain(1); loop(B.brown).connect(biq('lowpass', 260, .7)).connect(a).connect(sy.traffic); lfo(.07, .25, a.gain);
+    const h = gain(.35); loop(B.pink).connect(biq('bandpass', 140, 2)).connect(h).connect(sy.traffic); lfo(.05, .15, h.gain); }
+  loop(B.pink).connect(biq('lowpass', 380, .7)).connect(gain(.22)).connect(sy.waves);
+  { const lp = biq('lowpass', 900, .5), hg = gain(.6); lp.connect(hg).connect(sy.hum); lfo(.05, .25, hg.gain);
+    [110, 164.81, 220, 277.18, 329.63].forEach((f,i) => { const o = osc(i % 2 ? 'triangle' : 'sine', f), og = gain(.2/(1 + i*.4)); lfo(.03 + i*.017, f*.004, o.frequency); o.connect(og).connect(pan(i % 2 ? -.5 : .5, lp)); }); }
+  return true;
+}
+function tone(t, d, f0, f1, dest, v, type){
+  const o = ctx.createOscillator(); o.type = type || 'sine';
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d);
+  const e = env(t, v, Math.min(.02, d*.3), d - Math.min(.02, d*.3));
+  o.connect(e).connect(dest); o.start(t); o.stop(t + d + .03);
+}
+function birdCall(){
+  if (hasReal('birds')) { spawnBird(1 + (Math.random()*2|0)); return; }
+  const t = ctx.currentTime + .03, p = pan(rand(-.85,.85), sy.birds), sp = Math.random()*3|0;
+  if (world === 'city') { const f = rand(3200,4200); for (let i=0;i<3 + (Math.random()*4|0);i++) tone(t + i*.16, .06, f, f*.85, p, .25); }
+  else if (sp === 0) { const base = rand(2600,4200), n = 3 + (Math.random()*5|0); for (let i=0;i<n;i++) tone(t + i*.09, .07, base*rand(.85,1.2), base*rand(.8,1.3), p, .3); }
+  else if (sp === 1) { const f = rand(2500,3200); tone(t, .3, f, f*1.06, p, .32); tone(t + .38, .42, f*.82, f*.62, p, .28); }
+  else { const f = rand(4000,5400), n = 8 + (Math.random()*8|0); for (let i=0;i<n;i++) tone(t + i*.045, .032, f, f*.8, p, .22); }
+  spawnBird(1 + (Math.random()*2|0));
+}
+function hoot(t, d, dest){
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(world === 'mountain' ? 300 : 410, t); o.frequency.linearRampToValueAtTime(world === 'mountain' ? 270 : 372, t + d);
+  const e = ctx.createGain(); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(.5, t + .07); e.gain.setValueAtTime(.5, t + d - .1); e.gain.linearRampToValueAtTime(0, t + d);
+  o.connect(biq('lowpass', 900, .5)).connect(e).connect(dest); o.start(t); o.stop(t + d + .05);
+}
+function owlCall(){ if (hasReal('owl')) { const o = ctx.createBufferSource(); o.buffer = decoded.owl; o.connect(pan(rand(-.6,.6), rl.owl)); o.start(); owlEyes(); return; } const t = ctx.currentTime + .03, p = pan(rand(-.7,.7), sy.owl); if (world === 'mountain') { hoot(t,.45,p); hoot(t+.7,.6,p); } else { hoot(t,.5,p); hoot(t+.85,.2,p); hoot(t+1.15,.2,p); hoot(t+1.5,.6,p); } owlEyes(); }
+function frogCall(){
+  if (hasReal('frogs')) return;
+  const t = ctx.currentTime + .03, p = pan(rand(-.9,.9), sy.frogs), f = rand(140,260), n = 1 + (Math.random()*3|0);
+  for (let i=0;i<n;i++){
+    const s = t + i*rand(.25,.4), d = rand(.12,.22);
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, s); o.frequency.linearRampToValueAtTime(f*1.15, s + d);
+    const am = ctx.createOscillator(); am.type = 'square'; am.frequency.value = rand(18,30);
+    const amg = gain(.5), pg = gain(.5); am.connect(amg); amg.connect(pg.gain);
+    const e = ctx.createGain(); e.gain.setValueAtTime(0, s); e.gain.linearRampToValueAtTime(.6, s + .02); e.gain.linearRampToValueAtTime(0, s + d);
+    o.connect(biq('bandpass', f*3, 1.2)).connect(pg).connect(e).connect(p);
+    o.start(s); am.start(s); o.stop(s + d + .03); am.stop(s + d + .03);
+  }
+}
+function thunder(){
+  if (hasReal('thunder')) { lightning(); return; }
+  lightning();
+  const t = ctx.currentTime + rand(.5,2.2), s = ctx.createBufferSource(); s.buffer = B.brown;
+  const lp = biq('lowpass', 900, .6); lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(110, t + 3);
+  s.connect(lp).connect(env(t, 1.4, .12, rand(4,7))).connect(pan(rand(-.5,.5), sy.thunder)); s.start(t, Math.random()*2); s.stop(t + 7.5);
+}
+function drop(){
+  if (hasReal('rain')) return;
+  const t = ctx.currentTime + Math.random()*.15, s = ctx.createBufferSource(); s.buffer = B.white;
+  const e = ctx.createGain(); e.gain.setValueAtTime(rand(.12,.45), t); e.gain.exponentialRampToValueAtTime(.0001, t + .03);
+  s.connect(biq('bandpass', rand(1800,6000), rand(3,8))).connect(e).connect(pan(rand(-1,1), sy.rain)); s.start(t, Math.random()*4); s.stop(t + .04);
+}
+function waveCall(){
+  if (hasReal('waves')) { surge(rand(1.8,2.6), rand(3,4.5)); return; }
+  const t = ctx.currentTime + .03, up = rand(1.8,2.7), down = rand(3,4.6), p = pan(rand(-.4,.4), sy.waves);
+  const s = ctx.createBufferSource(); s.buffer = B.pink;
+  const lp = biq('lowpass', 300, .7); lp.frequency.setValueAtTime(300, t); lp.frequency.exponentialRampToValueAtTime(2400, t + up); lp.frequency.exponentialRampToValueAtTime(450, t + up + down);
+  s.connect(lp).connect(env(t, 1, up, down)).connect(p); s.start(t, Math.random()*.5); s.stop(t + up + down + .1);
+  const f = ctx.createBufferSource(); f.buffer = B.white;
+  f.connect(biq('highpass', 2800, .7)).connect(env(t + up*.85, .28, .25, down*.7)).connect(p); f.start(t, Math.random()*3); f.stop(t + up + down);
+  surge(up, down);
+}
+function gullCall(){
+  if (hasReal('gulls')) { spawnBird(1); return; }
+  const t = ctx.currentTime + .03, p = pan(rand(-.8,.8), sy.gulls), n = 1 + (Math.random()*3|0), f = rand(1500,2000);
+  for (let i=0;i<n;i++){
+    const s = t + i*rand(.3,.45), d = rand(.22,.34);
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f*.8, s); o.frequency.linearRampToValueAtTime(f*1.1, s + d*.25); o.frequency.exponentialRampToValueAtTime(f*.6, s + d);
+    o.connect(biq('bandpass', f*1.3, 1.4)).connect(env(s, .35, .03, d)).connect(p); o.start(s); o.stop(s + d + .1);
+  }
+  spawnBird(1);
+}
+function carCall(){
+  if (hasReal('cars')) { spawnCar(); return; }
+  const t = ctx.currentTime + .02, d = rand(2.5,4.5), dir = Math.random() < .5 ? -1 : 1;
+  const s = ctx.createBufferSource(); s.buffer = B.pink;
+  const bp = biq('bandpass', 1100, .8); bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1300, t + d*.45); bp.frequency.linearRampToValueAtTime(480, t + d);
+  const e = env(t, .7, d*.5, d*.5);
+  let out = sy.cars;
+  if (ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.setValueAtTime(-dir*.9, t); pn.pan.linearRampToValueAtTime(dir*.9, t + d); pn.connect(sy.cars); out = pn; }
+  s.connect(bp).connect(e).connect(out); s.start(t, Math.random()*3); s.stop(t + d + .1);
+  spawnCar(dir);
+}
+function trainCall(){
+  if (hasReal('train')) { spawnTrain(); return; }
+  const t = ctx.currentTime + .05, d = rand(9,13);
+  const s = ctx.createBufferSource(); s.buffer = B.brown;
+  const e = ctx.createGain(); e.gain.setValueAtTime(.0001, t); e.gain.exponentialRampToValueAtTime(.9, t + d*.4); e.gain.setValueAtTime(.9, t + d*.6); e.gain.exponentialRampToValueAtTime(.0001, t + d);
+  s.connect(biq('lowpass', 170, .8)).connect(e).connect(sy.train); s.start(t, Math.random()*2); s.stop(t + d + .1);
+  for (let k = t + .8; k < t + d - .8; k += .62) {
+    const amp = Math.sin(Math.PI*(k - t)/d)*.5;
+    [0, .13].forEach(o => { const c = ctx.createBufferSource(); c.buffer = B.white; c.connect(biq('bandpass', 1400, 2)).connect(env(k + o, Math.max(.001, amp), .005, .05)).connect(sy.train); c.start(k + o, Math.random()*4); c.stop(k + o + .08); });
+  }
+  spawnTrain();
+}
+function burnerCall(){
+  const t = ctx.currentTime + .03, d = rand(1.2,2.8), s = ctx.createBufferSource(); s.buffer = B.pink;
+  const e = ctx.createGain(); e.gain.setValueAtTime(.0001, t); e.gain.exponentialRampToValueAtTime(.9, t + .12); e.gain.setValueAtTime(.9, t + d - .2); e.gain.exponentialRampToValueAtTime(.0001, t + d);
+  s.connect(biq('bandpass', 420, .7)).connect(e).connect(pan(rand(-.6,.6), sy.burner)); s.start(t, Math.random()*3); s.stop(t + d + .1);
+  ignite(d);
+}
+function bellCall(){
+  if (hasReal('bells')) return;
+  if (world === 'sky') { const t = ctx.currentTime + .03, p = pan(rand(-.8,.8), sy.bells), notes = [880,987.8,1174.7,1318.5,1568,1760], n = 2 + (Math.random()*4|0);
+    for (let i=0;i<n;i++) { const f = notes[(Math.random()*notes.length)|0], s = t + i*rand(.2,.6); tone(s, 3, f, f*.998, p, .12); tone(s, 1.2, f*2.76, f*2.75, p, .03); } return; }
+  const t = ctx.currentTime + .03, p = pan(rand(-.8,.8), sy.bells);
+  if (world === 'shore') { [[320,.35],[752,.18],[1180,.1]].forEach(([f,v]) => tone(t, 4, f, f*.995, p, v)); if (Math.random() < .5) [[320,.25],[752,.12]].forEach(([f,v]) => tone(t + 1.6, 3.5, f, f*.995, p, v)); }
+  else { const k = rand(.9,1.15), n = 2 + (Math.random()*5|0); for (let i=0;i<n;i++){ const s = t + i*rand(.15,.5); [[540,.22],[810,.14]].forEach(([f,v]) => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f*k; o.connect(biq('bandpass', 900*k, 3)).connect(env(s, v, .004, .35)).connect(p); o.start(s); o.stop(s + .4); }); } }
+}
+const next = {};
+function tick(){
+  if (!playing || !ctx) return;
+  const now = ctx.currentTime;
+  if (levels.rain > .02) { const n = Math.round(levels.rain*Math.random()*5); for (let i=0;i<n;i++) drop(); }
+  if (levels.stream > .02) { S.bp1.frequency.setTargetAtTime(rand(550,950), now, .15); S.bp2.frequency.setTargetAtTime(rand(1600,2600), now, .1); S.g2.gain.setTargetAtTime(rand(.15,.5), now, .1); }
+  const ev = (id, fn, a, b) => { if (levels[id] < .02) { next[id] = 0; return; } if (now >= (next[id] || 0)) { if (next[id] > 0) fn(); next[id] = now + rand(a,b)*(1.4 - levels[id]*.6); } };
+  ev('birds', birdCall, .6, 3.4); ev('owl', owlCall, hasReal('owl') ? 16 : 9, hasReal('owl') ? 32 : 20); ev('frogs', frogCall, 1.2, 4.5); ev('thunder', thunder, world === 'sky' ? 6 : 16, world === 'sky' ? 16 : 40);
+  ev('waves', waveCall, 4.5, 7.5); ev('gulls', gullCall, 3, 9); ev('cars', carCall, 1.5, 5); ev('train', trainCall, 30, 70);
+  ev('bells', bellCall, world === 'shore' ? 7 : world === 'sky' ? 4 : 2, world === 'shore' ? 15 : world === 'sky' ? 10 : 6);
+  ev('burner', burnerCall, 2.5, 8);
+  tickTimer();
+}
+async function play(){
+  if (!ctx && !initAudio()) { $('#activeCt').textContent = 'Sound not supported here'; return; }
+  clearTimeout(pauseT);
+  try { await ctx.resume(); } catch(e){}
+  master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(masterVol, ctx.currentTime, .6);
+  playing = true; clearInterval(schedT); schedT = setInterval(tick, 200);
+  syncReal(); startBgAudio();
+  try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){ wakeLock = null; }
+  render();
+}
+function pause(){
+  if (!ctx) return;
+  playing = false; clearInterval(schedT);
+  master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, .25);
+  pauseT = setTimeout(() => { if (!playing) ctx.suspend(); }, 1200);
+  try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
+  timerEnd = 0; timerMin = 0; renderTimers(); render();
+}
+let timerEnd = 0, timerMin = 0, timerTotal = 0;
+function tickTimer(){
+  if (!timerEnd) return;
+  if (timerEnd - Date.now() <= 0) { timerEnd = 0; timerMin = 0; master.gain.setTargetAtTime(0, ctx.currentTime, 2.5); setTimeout(pause, 6000); renderTimers(); }
+  renderCount(); renderBadge();
+}
+
+/* ---------- UI ---------- */
+const ringEl = $('#ring');
+const PLAY = '<path d="M8 5.5v13l11-6.5z"/>', PAUSE = '<rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/>';
+const ico = p => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+
+const openSheet = () => { const sh = $('#sheet'); if (!sh.classList.contains('open')) { sh.classList.add('open'); $('#sheetBtn').setAttribute('aria-expanded', 'true'); } };
+const SPOTS = [
+  { sel:'#play', title:'Play and pause', hint:'Tap here to start or pause the sound.' },
+  { sel:'#worlds', title:'Worlds', hint:'Switch between Forest, Mountain, City, Sea Shore and Sky.' },
+  { sel:'#chips', title:'Scenes', hint:'Pick a scene in this world. Swipe sideways to see more.' },
+  { sel:'#phases', title:'Time of day', hint:'Choose sunrise, day, sunset or night.' },
+  { sel:'#locBtn', title:'Real places', hint:'Browse real places and follow their local time.' },
+  { sel:'#sheet', title:'Sound mix', hint:'Set the master volume and each sound layer here.', prep:openSheet },
+  { sel:'#tbToggle', title:'Sleep timer', hint:'Tap the moon to choose 15, 30, 60 or 90 minutes. It lights up while the timer runs.' },
+  { sel:'#srcsw', title:'Electronic or Original', hint:'The waveform plays electronic sound; the microphone plays real recordings.' },
+  { sel:'#colorBtn', title:'Colour', hint:'Tap to pick an accent colour for the app.' },
+  { sel:'#pipBtn', title:'Mini player', hint:'Open a small floating window of the live scene.', when:() => !$('#pipBtn').hidden },
+  null
+];
+function buildUI(){
+  $('#pipBtn').hidden = !(pipSupported || nativePip);
+  $('#worlds').innerHTML = Object.entries(WORLDS).map(([id,w]) => `<button class="wbtn" type="button" data-w="${id}" aria-pressed="false">${ico(w.icon)}${w.name}</button>`).join('');
+  $('#worlds').addEventListener('click', e => {
+    const b = e.target.closest('.wbtn'); if (!b || b.dataset.w === world) return;
+    lastScene[world] = si; li = -1; store.set('de.loc', '');
+    const target = lastScene[b.dataset.w] ?? SC.findIndex(s => s.world === b.dataset.w);
+    setScene(target);
+  });
+  $('#phases').innerHTML = PHASES.map(p => `<button class="ph" type="button" data-p="${p.id}" aria-pressed="false">${ico(p.icon)}${p.name}</button>`).join('');
+  $('#phases').addEventListener('click', e => {
+    const b = e.target.closest('.ph'); if (!b) return;
+    if (li >= 0 && liveTime) { liveTime = false; store.set('de.live', '0'); $('#liveSw').setAttribute('aria-checked', 'false'); }
+    setPhase(b.dataset.p);
+  });
+  $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; li = -1; store.set('de.loc', ''); setScene(+b.dataset.i); });
+
+  $('#mix').innerHTML =
+    `<div class="row">${ico('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>')}<label for="s-master">Master volume</label><span class="val" id="v-master">80%</span><input type="range" id="s-master" min="0" max="100" value="80"></div>
+     <div class="group" id="layersLbl">Layers</div><div id="rows"></div>
+     <div class="group">Sleep timer</div><div class="timers" id="timers">${[0,15,30,60,90].map(m => `<button class="tbtn" type="button" data-m="${m}" aria-pressed="${m===0}">${m ? m + ' min' : 'Off'}</button>`).join('')}</div>
+     <p class="foot" id="srcFoot"></p>
+     <details class="credits"><summary>Sound credits</summary>
+       <p>Original recordings, edited into seamless loops. From the <a href="https://github.com/rafaelmardojai/blanket" target="_blank" rel="noopener">Blanket</a> project: wind by felix.blume, birds by kvgarlic, stream by gluckose, harbour boat by Falcet (all CC0); rain by alex36917, storm by Digifish music, waves by Luftrum (CC BY); night crickets by Lisa Redfern (public domain). From the <a href="https://github.com/remvze/moodist" target="_blank" rel="noopener">Moodist</a> project: owl, tree frogs, seagulls, cows, traffic, road and train (CC0 or Pixabay Content License).</p>
+     </details>`;
+  $('#mix').addEventListener('input', e => {
+    const el = e.target; if (el.type !== 'range') return;
+    const v = el.value/100; el.style.setProperty('--p', el.value + '%');
+    if (el.id === 's-master') { masterVol = v; $('#v-master').textContent = el.value + '%'; if (ctx && playing) master.gain.setTargetAtTime(masterVol, ctx.currentTime, .1); return; }
+    setLevel(el.dataset.id, v, .08); renderCount();
+  });
+  $('#s-master').style.setProperty('--p', '80%');
+  $('#timers').addEventListener('click', e => { const b = e.target.closest('.tbtn'); if (b) setTimer(+b.dataset.m); });
+  $('#tbOpts').addEventListener('click', e => { const b = e.target.closest('.tbtn'); if (b) { setTimer(+b.dataset.m); setTimeout(closeBadge, 900); } });
+  document.addEventListener('click', e => { if (!e.target.closest('#tbadge')) closeBadge(); });
+  $('#tbToggle').addEventListener('click', () => { const o = !$('#tbadge').classList.contains('open'); $('#tbadge').classList.toggle('open', o); $('#tbToggle').setAttribute('aria-expanded', o); });
+  $('#tbCancel').addEventListener('click', () => { setTimer(0); closeBadge(); });
+  $('#play').addEventListener('click', () => playing ? pause() : play());
+  $('#sheetBtn').addEventListener('click', () => { const s = $('#sheet'), o = !s.classList.contains('open'); s.classList.toggle('open', o); $('#sheetBtn').setAttribute('aria-expanded', o); });
+  document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); playing ? pause() : play(); } });
+
+  if (reduce) document.querySelectorAll('svg.logo').forEach(v => { try { v.pauseAnimations(); } catch(e) {} });
+
+  // about
+  const aboutM = $('#aboutModal');
+  $('#aboutStats').innerHTML = [[Object.keys(WORLDS).length,'worlds'],[SC.length,'scenes'],[LOCS.length,'real places'],[Object.keys(LOOPS).length + 1,'recordings']]
+    .map(([n,l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  const closeAbout = () => { aboutM.hidden = true; $('#brandBtn').focus(); };
+  $('#brandBtn').addEventListener('click', () => { aboutM.hidden = false; });
+  ['#aboutClose','#aboutBack','#aboutDone'].forEach(id => $(id).addEventListener('click', closeAbout));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !aboutM.hidden) closeAbout(); });
+
+  // help
+  const helpM = $('#helpModal');
+  let stepN = 0;
+  const step = (icon, title, body) => { const i = stepN++, t = SPOTS[i] && (!SPOTS[i].when || SPOTS[i].when()) ? SPOTS[i] : null;
+    return t ? `<button class="hstep" type="button" data-t="${i}" aria-label="${title}: show me in the app"><span class="hi">${ico(icon)}</span><div><h3>${title}<span class="show">Show me →</span></h3><p>${body}</p></div></button>`
+             : `<div class="hstep"><span class="hi">${ico(icon)}</span><div><h3>${title}</h3><p>${body}</p></div></div>`; };
+  $('#helpBody').innerHTML = `<p class="help-intro">Digi Earth is a living soundscape. Pick a world, choose a time of day, press play and let it run in the background.</p>` +
+    step(PLAY, 'Play and pause', 'Tap the big round <b>play</b> button. Sound fades in gently and the ring around the button pulses with the mix. Your screen stays awake while it plays. On a keyboard, the space bar also plays and pauses.') +
+    step(WORLDS.forest.icon, 'Choose a world', `Use the tabs at the top: <b>Forest, Mountain, City, Sea Shore</b> and <b>Sky</b>. Each world has its own scenery, animals and sound layers.`) +
+    step('<rect x="3" y="8" width="8" height="8" rx="4"/><rect x="13" y="8" width="8" height="8" rx="4"/>', 'Pick a scene', `The round chips under the play button switch between ${SC.length} climates, such as Rainforest, Himalaya, Neon Rain, Lagoon or Milky Way. Swipe sideways to see them all.`) +
+    step(PHASES[0].icon, 'Set the time of day', 'Tap <b>Sunrise, Day, Sunset</b> or <b>Night</b> next to the play button. The light, sky and sound change with it: birds sing at sunrise, crickets and owls come out at night, and city windows light up after dusk. Sunset and Night also switch the app to dark mode.') +
+    step('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 'Visit a real place', `Tap <b>Choose a real place</b> above the title to browse ${LOCS.length} real locations, from the Amazon to the Doha Corniche. Search by place, country or sound. With <b>Match local time</b> on, the scene follows the real sunrise and sunset there. Tapping a time-of-day button switches back to manual.`) +
+    step(ICON.hum, 'Mix the sound', 'Open <b>Sound mix</b> at the bottom to set the master volume and each of the 8 layers, such as rain, birds or waves. Each scene and time of day loads a matching mix, and your changes stay until you switch again.') +
+    step('<path d="M18 14.5A6.5 6.5 0 0 1 9.5 6a6.5 6.5 0 1 0 8.5 8.5z"/><path d="M15 4h3l-3 3.5h3"/>', 'Sleep timer', 'The <b>moon button</b> on the right side is always there. Tap it and choose <b>15, 30, 60</b> or <b>90 min</b>; it turns your accent colour and shows a shrinking ring while the timer runs. Tap it again to see the time left or turn it off. The same options are inside Sound mix. When time is up, the sound fades out and stops.') +
+    step('<path d="M2 12h3l2-6 3 12 3-9 2 6 2-3h5"/>', 'Electronic or Original sound', 'Use the switch at the top. The <b>waveform</b> icon plays electronic sound generated live, so every bird call and wave is different. The <b>microphone</b> icon plays real field recordings. The sky drone, balloon burners and wind chimes are always electronic.') +
+    step('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>', 'Change the colour', 'Tap the <b>rainbow ring</b> to pick an accent colour. <b>Scene</b> lets each climate choose its own colour; the others keep one colour everywhere.') +
+    step('<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="11.5" width="7" height="5.5" rx="1.2"/>', 'Background, lock screen and mini player', 'Sound keeps playing when you lock your phone or switch apps, and a small player with the scene picture appears on the lock screen. Use it to pause, play or skip to the next scene. Where your browser allows it, the <b>mini player</b> button next to the place name opens a small live window of the scene that floats over other apps.') +
+    step('<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>', 'Tips', 'Use headphones: birds, cars and waves move from one ear to the other. Your world, scene, place, colour and sound choice are remembered on this device for next time. Credits for the recordings are at the bottom of Sound mix.');
+  const openHelp = (at) => { hideSpot(); helpM.hidden = false; const b = typeof at === 'number' && $(`.hstep[data-t="${at}"]`); if (b) b.scrollIntoView({ block:'center' }); else $('#helpBody').scrollTop = 0; store.set('de.helpSeen', '1'); };
+  $('#helpBody').addEventListener('click', e => { const b = e.target.closest('button.hstep'); if (b) spotlight(+b.dataset.t); });
+  let spotI = -1;
+  function hideSpot(){ $('#spot').hidden = true; spotI = -1; }
+  function spotlight(i){
+    const t = SPOTS[i]; if (!t || (t.when && !t.when())) return;
+    helpM.hidden = true; spotI = i;
+    if (t.prep) t.prep();
+    setTimeout(() => {
+      const el = $(t.sel); if (!el) return;
+      const sc = el.closest('.sheet-scroll'); if (sc) sc.scrollTop = Math.max(0, el.offsetTop - sc.offsetTop - 40);
+      (document.scrollingElement || document.documentElement).scrollTop = 0;
+      const r = el.getBoundingClientRect(), pad = 6, hole = $('#spotHole'), tip = $('#spotTip');
+      Object.assign(hole.style, { left:(r.left - pad) + 'px', top:(r.top - pad) + 'px', width:(r.width + pad*2) + 'px', height:(r.height + pad*2) + 'px', borderRadius: Math.min(999, parseFloat(getComputedStyle(el).borderTopLeftRadius) + pad || 16) + 'px' });
+      $('#spotT').textContent = t.title; $('#spotH').textContent = t.hint;
+      $('#spot').hidden = false;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      tip.style.left = Math.max(16, Math.min(innerWidth - tw - 16, r.left + r.width/2 - tw/2)) + 'px';
+      tip.style.top = (r.bottom + 16 + th < innerHeight - 8 ? r.bottom + 16 : Math.max(16, r.top - th - 16)) + 'px';
+      $('#spotOk').focus({ preventScroll:true });
+    }, t.prep ? 450 : 80);
+  }
+  $('#spotOk').addEventListener('click', hideSpot);
+  $('#spotBack').addEventListener('click', () => openHelp(spotI));
+  document.addEventListener('pointerdown', e => { if (!$('#spot').hidden && !e.target.closest('#spotTip')) hideSpot(); }, true);
+  addEventListener('resize', () => { if (!$('#spot').hidden) hideSpot(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#spot').hidden) hideSpot(); });
+  const closeHelp = () => { helpM.hidden = true; $('#helpBtn').focus(); };
+  $('#helpBtn').addEventListener('click', openHelp);
+  ['#helpClose','#helpBack','#helpDone'].forEach(id => $(id).addEventListener('click', closeHelp));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !helpM.hidden) closeHelp(); });
+  if (!store.get('de.helpSeen')) setTimeout(openHelp, 900);
+
+  // install (only offered when the browser allows it, e.g. the hosted PWA build)
+  let deferredInstall = null;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (!standalone) $('#installRow').hidden = false; });
+  if (!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent) && window.top === window) { $('#installRow').hidden = false; $('#installTxt').textContent = 'In Safari, tap Share, then Add to Home Screen.'; $('#installBtn').hidden = true; }
+  $('#installBtn').addEventListener('click', async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch(e) {} deferredInstall = null; $('#installRow').hidden = true; });
+  addEventListener('appinstalled', () => { $('#installRow').hidden = true; toast('Digi Earth is installed'); });
+
+  // mini player
+  if (pipSupported || nativePip) $('#pipBtn').addEventListener('click', () => { if (nativePip) { try { NATIVE.enterPip(); } catch(e) {} } else togglePip(); });
+
+  // sound source
+  $('#srcsw').addEventListener('click', e => {
+    const b = e.target.closest('.sbtn'); if (!b || b.dataset.src === srcMode) return;
+    srcMode = b.dataset.src; store.set('de.src', srcMode); renderSrc();
+    toast(srcMode === 'real' ? 'Original: real field recordings' : 'Electronic: sound generated live');
+    if (ctx) syncReal();
+  });
+
+  // colour
+  const pop = $('#colorPop'), cbtn = $('#colorBtn');
+  $('#swatches').innerHTML = ACCENTS.map(a => `<button class="swb" type="button" data-a="${a.id}" aria-pressed="${a.id === accent.id}"><i style="background:${a.d ? `linear-gradient(135deg,${a.d} 50%,${a.n} 50%)` : 'conic-gradient(#2f6f3a,#2f6c8f,#3b56b8,#ff6fb5,#0f8a9a,#b14e1c,#2f6f3a)'}"></i>${a.name}</button>`).join('');
+  const closePop = () => { pop.hidden = true; cbtn.setAttribute('aria-expanded', 'false'); };
+  cbtn.addEventListener('click', e => { e.stopPropagation(); pop.hidden = !pop.hidden; cbtn.setAttribute('aria-expanded', String(!pop.hidden)); });
+  pop.addEventListener('click', e => {
+    e.stopPropagation(); const b = e.target.closest('.swb'); if (!b) return;
+    accent = ACCENTS.find(a => a.id === b.dataset.a); store.set('de.accent', accent.id);
+    document.querySelectorAll('.swb').forEach(x => x.setAttribute('aria-pressed', x === b)); render();
+  });
+  document.addEventListener('click', closePop);
+
+  // places
+  const modal = $('#locModal');
+  const openLoc = () => { modal.hidden = false; renderLocList(); setTimeout(() => { if (matchMedia('(min-width:640px)').matches) $('#locSearch').focus(); }, 50); };
+  const closeLoc = () => { modal.hidden = true; $('#locBtn').focus(); };
+  $('#locBtn').addEventListener('click', openLoc);
+  $('#locClose').addEventListener('click', closeLoc);
+  $('#locBack').addEventListener('click', closeLoc);
+  $('#locSearch').addEventListener('input', renderLocList);
+  $('#regions').addEventListener('click', e => { const b = e.target.closest('.rchip'); if (!b) return; locRegion = b.dataset.r; renderLocList(); $('#locList').scrollTop = 0; });
+  $('#locList').addEventListener('click', e => { const b = e.target.closest('.loc'); if (!b) return; setLocation(+b.dataset.i); closeLoc(); });
+  $('#liveSw').addEventListener('click', () => { liveTime = !liveTime; store.set('de.live', liveTime ? '1' : '0'); $('#liveSw').setAttribute('aria-checked', liveTime); applyLive(); render(); });
+  $('#liveSw').setAttribute('aria-checked', liveTime);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!modal.hidden) closeLoc(); closePop(); } });
+}
+let toastT = 0;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
+function renderSrc(){
+  document.querySelectorAll('.sbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.src === srcMode));
+  $('#srcFoot').textContent = srcMode === 'real'
+    ? 'Original mode plays real field recordings. The sky drone, balloon burners and wind chimes stay electronic. The visuals still react: lightning, birds, cars, trains, waves and balloons keep moving.'
+    : 'Electronic mode generates every sound live in your browser, so each bird call and wave is different. Changing the world, scene or time of day loads a matching mix.';
+}
+function renderChips(){
+  $('#chips').innerHTML = SC.map((s,i) => s.world !== world ? '' :
+    `<button class="chip glass" type="button" data-i="${i}" aria-pressed="${i === si}"><span class="sw" style="background:linear-gradient(160deg,${s.day.sky[0]} 0 45%,${(s.cols.leaf || s.cols.rock || s.cols.build || s.cols.water)[0]} 45% 100%)"></span>${s.short}</button>`).join('');
+}
+function renderRows(){
+  $('#layersLbl').textContent = `Layers · ${WORLDS[world].name}`;
+  $('#rows').innerHTML = WORLDS[world].sounds.map(([id,name]) => { const v = Math.round(levels[id]*100);
+    return `<div class="row">${ico(ICON[id])}<label for="s-${id}">${name}</label><span class="val" id="v-${id}">${v}%</span><input type="range" id="s-${id}" data-id="${id}" min="0" max="100" value="${v}" style="--p:${v}%"></div>`; }).join('');
+}
+function setLevel(id, v, tc){
+  levels[id] = v;
+  const s = $('#s-' + id); if (s) { s.value = Math.round(v*100); s.style.setProperty('--p', Math.round(v*100) + '%'); }
+  const lab = $('#v-' + id); if (lab) lab.textContent = Math.round(v*100) + '%';
+  if (ctx) ch[id].gain.setTargetAtTime(lvl(id), ctx.currentTime, tc);
+}
+function mixFor(s, ph){
+  const d = s.mix.day, nn = s.mix.night, m = {};
+  ALL.forEach(id => {
+    const dv = d[id] || 0, nv = nn[id] || 0;
+    m[id] = ph === 'day' ? dv : ph === 'night' ? nv : ph === 'sunrise' ? (id === 'birds' && dv > 0 ? Math.min(1, dv + .2) : dv*.6 + nv*.4) : dv*.45 + nv*.55;
+  });
+  return m;
+}
+function applyPreset(){
+  const m = mixFor(SC[si], phase), allowed = WORLDS[world].sounds.map(x => x[0]);
+  if (li >= 0) Object.entries(LOCS[li].tweak).forEach(([k,v]) => { if (k === 'birds' && phase === 'night') return; m[k] = Math.max(0, Math.min(1, m[k] + v)); });
+  ALL.forEach(id => setLevel(id, allowed.includes(id) ? m[id] : 0, .9));
+  renderCount();
+}
+function renderCount(){
+  const el = $('#activeCt');
+  if (loadMsg) { el.textContent = loadMsg; return; }
+  if (timerEnd && playing) { const l = Math.max(0, timerEnd - Date.now()), m = Math.floor(l/60000), s = Math.floor(l/1000) % 60; el.textContent = `Fades in ${m}:${String(s).padStart(2,'0')}`; return; }
+  const n = ALL.filter(id => levels[id] > .02).length; el.textContent = `${n} of 8 layers on`;
+}
+function setTimer(m){
+  const was = timerMin;
+  timerMin = m; timerTotal = m*60000; timerEnd = m ? Date.now() + timerTotal : 0;
+  if (m && !playing) play();
+  renderTimers(); renderCount(); renderBadge();
+  toast(m ? `Sleep timer set for ${m} minutes` : was ? 'Sleep timer off' : 'Sleep timer is off');
+}
+function closeBadge(){ $('#tbadge').classList.remove('open'); $('#tbToggle').setAttribute('aria-expanded', 'false'); }
+function renderBadge(){
+  const el = $('#tbadge'), on = !!timerEnd;
+  el.classList.toggle('active', on);
+  if (!on) { $('#tbToggle').setAttribute('aria-label', 'Sleep timer, off'); return; }
+  const l = Math.max(0, timerEnd - Date.now()), m = Math.floor(l/60000), sec = Math.floor(l/1000) % 60;
+  $('#tbTime').textContent = `${m}:${String(sec).padStart(2,'0')}`;
+  el.style.setProperty('--f', timerTotal ? (l/timerTotal).toFixed(4) : 1);
+  $('#tbToggle').setAttribute('aria-label', `Sleep timer on, ${m} minutes ${sec} seconds left`);
+}
+function renderTimers(){ document.querySelectorAll('.tbtn').forEach(b => b.setAttribute('aria-pressed', +b.dataset.m === timerMin)); }
+function renderRegions(){
+  $('#regions').innerHTML = REGIONS.map(r => `<button class="rchip" type="button" data-r="${r}" aria-pressed="${r === locRegion}">${r}<span>${LOCS.filter(l => inRegion(l, r)).length}</span></button>`).join('');
+}
+function renderLocList(){
+  renderRegions();
+  const q = $('#locSearch').value.trim().toLowerCase();
+  const order = [world, ...Object.keys(WORLDS).filter(w => w !== world)];
+  let html = '';
+  order.forEach(w => {
+    const items = LOCS.map((l,i) => ({ l, i })).filter(({l}) => l.world === w && inRegion(l, locRegion) && (!q || `${l.name} ${l.place} ${l.about} ${w} ${regionOf(l)}`.toLowerCase().includes(q)));
+    if (!items.length) return;
+    html += `<div class="lgrp">${WORLDS[w].name}</div>` + items.map(({l,i}) => {
+      const s = SC.find(x => x.id === l.scene), now = locNow(l), nightish = now.phase === 'night' || now.phase === 'sunset';
+      const base = (s.cols.leaf || s.cols.rock || s.cols.build || s.cols.water)[0];
+      return `<button class="loc" type="button" data-i="${i}" aria-pressed="${i === li}"><span class="lsw" style="background:linear-gradient(160deg,${nightish ? s.night.sky[0] : s.day.sky[0]} 0 48%,${base} 48% 100%)"></span><b>${l.name}</b><span class="ltime">${now.txt} · ${now.phase}</span><span class="lsub">${l.place} · ${l.about}</span></button>`;
+    }).join('');
+  });
+  $('#locList').innerHTML = html || `<p class="empty">No place matches that search${locRegion !== 'All' ? ' in ' + locRegion : ''}. Try another word or region.</p>`;
+}
+let nativeKey = '';
+function nativeUpdate(){
+  const Lc = li >= 0 ? LOCS[li] : null, t = Lc ? Lc.name : SC[si].name, sub = `${WORLDS[world].name} · ${PHASES.find(p => p.id === phase).name}`;
+  $('#pipTitle').innerHTML = `<b>${t}</b><span>${sub}</span>`;
+  if (!NATIVE) return;
+  const k = [playing, t, sub, isDarkUI()].join('|'); if (k === nativeKey) return; nativeKey = k;
+  try { NATIVE.update(playing, t, sub, isDarkUI()); } catch(e) {}
+}
+function render(){
+  const s = SC[si], Lc = li >= 0 ? LOCS[li] : null, phName = PHASES.find(p => p.id === phase).name;
+  if (Lc) {
+    const now = locNow(Lc);
+    $('#locLbl').textContent = `${Lc.name}, ${Lc.place.split(', ').pop()}`;
+    $('#eyebrow').textContent = `${s.code} · ${phName} · ${now.txt} local${liveTime ? '' : ' · manual'}`;
+    $('#title').textContent = Lc.name;
+    $('#meta').innerHTML = `<b>${Lc.coord}</b> · ${Lc.place}<br>${s.name} · ${Lc.about}`;
+  } else {
+    $('#locLbl').textContent = 'Choose a real place';
+    $('#eyebrow').textContent = `${s.code} · ${phName}`;
+    $('#title').textContent = s.name;
+    $('#meta').innerHTML = `<b>${s.stats}</b><br>${s.desc}`;
+  }
+  const darkUI = isDarkUI();
+  document.documentElement.style.setProperty('--accent', accent.id === 'auto' ? s[darkUI ? 'night' : 'day'].accent : (darkUI ? accent.n : accent.d));
+  document.querySelectorAll('.wbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.w === world));
+  document.querySelectorAll('.ph').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === phase));
+  document.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', +b.dataset.i === si));
+  $('#playIcon').innerHTML = playing ? PAUSE : PLAY;
+  $('#play').setAttribute('aria-label', playing ? 'Pause ambience' : 'Play ambience');
+  renderCount(); renderBadge(); refreshArtwork(); updateMediaSession(); nativeUpdate();
+}
+function setPhase(ph){
+  phase = ph;
+  document.documentElement.setAttribute('data-theme', isDarkUI() ? 'dark' : 'light');
+  tgt = targetPal(SC[si], phase);
+  applyPreset(); render();
+}
+function applyLive(){ if (li < 0 || !liveTime) return; const p = locNow(LOCS[li]).phase; if (p !== phase) setPhase(p); }
+function setScene(i, after){
+  const go = () => {
+    const worldChanged = SC[i].world !== world || !$('#chips').children.length;
+    si = i; world = SC[i].world; store.set('de.scene', SC[i].id);
+    if (li >= 0 && liveTime) { phase = locNow(LOCS[li]).phase; document.documentElement.setAttribute('data-theme', isDarkUI() ? 'dark' : 'light'); }
+    build(); tgt = targetPal(SC[si], phase); cur = clonePal(tgt);
+    if (worldChanged) { renderChips(); renderRows(); }
+    applyPreset(); render(); if (ctx) syncReal(); if (after) after();
+  };
+  if (i === si && $('#chips').children.length) { go(); return; }
+  const f = $('#fade'); f.classList.add('on');
+  setTimeout(() => { go(); f.classList.remove('on'); }, reduce ? 0 : 340);
+}
+function setLocation(j){ li = j; store.set('de.loc', LOCS[j].id); setScene(SC.findIndex(s => s.id === LOCS[j].scene)); }
+
+buildUI(); resize(); renderChips(); renderRows(); renderSrc(); applyPreset(); render();
+// Commands the Android app sends (notification buttons, back button, picture-in-picture)
+window.__dePlay = () => play();
+window.__dePause = () => pause();
+window.__deToggle = () => playing ? pause() : play();
+window.__deNext = () => stepScene(1);
+window.__dePip = on => document.documentElement.classList.toggle('pip-mode', !!on);
+window.__deBack = () => {
+  const open = id => !$(id).hidden;
+  if (open('#spot')) { $('#spotOk').click(); return true; }
+  for (const [m, c] of [['#aboutModal','#aboutClose'], ['#helpModal','#helpClose'], ['#locModal','#locClose']]) if (open(m)) { $(c).click(); return true; }
+  if (!$('#colorPop').hidden || $('#tbadge').classList.contains('open')) { document.body.click(); return true; }
+  if ($('#sheet').classList.contains('open') && innerWidth < 960) { $('#sheetBtn').click(); return true; }
+  return false;
+};
+addEventListener('resize', resize);
+setInterval(() => { applyLive(); render(); if (!$('#locModal').hidden) renderLocList(); }, 30000);
+raf = requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+// Offline support for the website; the Android app bundles everything and skips this.
+if ('serviceWorker' in navigator && !window.DigiEarthNative) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>

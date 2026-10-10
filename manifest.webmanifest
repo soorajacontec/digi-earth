@@ -1,0 +1,65 @@
+{
+  "name": "Digi Earth",
+  "short_name": "Digi Earth",
+  "description": "Animated ambience worlds \u2014 forest, mountain, city, sea shore and sky \u2014 with live and recorded nature sound.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07100f",
+  "theme_color": "#0f2a22",
+  "categories": [
+    "lifestyle",
+    "health",
+    "music"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/forest-sunrise.png",
+      "sizes": "540x1170",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tropical Rainforest at sunrise"
+    },
+    {
+      "src": "screenshots/city-night.png",
+      "sizes": "540x1170",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Neon Rain City at night"
+    },
+    {
+      "src": "screenshots/shore-sunset.png",
+      "sizes": "540x1170",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tropical Lagoon at sunset"
+    },
+    {
+      "src": "screenshots/sky-aurora.png",
+      "sizes": "540x1170",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Aurora Skies at night"
+    }
+  ]
+}
