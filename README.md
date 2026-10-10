@@ -37,7 +37,7 @@ Opening `index.html` straight from disk mostly works, but the offline service wo
 
 ## Publish on GitHub Page
 
- Digi Earth Live `https://soorajacontec.github.io/digi-earth/`.
+ Digi Earth Live **[▶ Open the live app](https://soorajacontec.github.io/digi-earth/)**
  
 
 ## Project structure
