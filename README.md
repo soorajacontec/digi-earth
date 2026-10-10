@@ -35,57 +35,10 @@ python3 -m http.server 8000
 
 Opening `index.html` straight from disk mostly works, but the offline service worker and the original recordings need a web server.
 
-## Publish on GitHub Pages
+## Publish on GitHub Page
 
-1. Create a new repository on GitHub, for example `digi-earth`.
-2. Upload everything in this folder to the repository root (on the GitHub website: **Add file → Upload files**, then drag the files and folders in).
-3. Go to **Settings → Pages**, set **Source** to *Deploy from a branch*, choose `main` and `/ (root)`, and save.
-4. After a minute the app is live at `https://<your-username>.github.io/digi-earth/`.
-5. Open that address on your phone to install it: on Android tap **Install** in the *How to use* panel or Chrome's menu; on iPhone use **Share → Add to Home Screen**.
-
-The empty `.nojekyll` file tells GitHub Pages to serve the files as they are.
-
-## Android app
-
-The `android/` folder wraps the same web app in a native Android app (Android 8 and newer). It bundles every file, so it works fully offline, and adds:
-
-- a media notification on the lock screen with **Pause/Play**, **Next scene** and **Stop**
-- sound that keeps playing with the screen locked or while you use other apps
-- picture-in-picture: press Home while sound is playing and the live scene shrinks into a floating window
-- status bar icons that switch between light and dark with the time of day, and an edge-to-edge scene
-
-### Get the APK (no computer setup needed)
-
-GitHub builds the app for you every time you push to `main` (see `.github/workflows/android.yml`).
-
-1. Open the **Actions** tab of your repository and select the latest **Build Android app** run.
-2. When it finishes (about 3–5 minutes), download **DigiEarth-android** under *Artifacts*. It is a zip containing `DigiEarth.apk`.
-3. Copy the APK to your phone and open it. Android asks you to allow installs from that app (Files or Chrome) the first time.
-
-To get a direct download link instead, create a release (**Releases → Draft a new release**, tag `v1.0`, publish). The APK is attached to the release automatically.
-
-### Build it yourself
-
-Open the `android` folder in Android Studio and press **Run**, or from a terminal:
-
-```bash
-cd android
-./gradlew assembleRelease
-# APK: android/app/build/outputs/apk/release/
-```
-
-The web files from the repository root are copied into the app on every build, so edit `index.html` once and both the website and the app update.
-
-### Publishing on Google Play
-
-Google Play needs the app signed with your own key.
-
-1. Create a key once (keep the file and passwords safe; you need them for every update):
-   `keytool -genkeypair -v -keystore digi-earth.jks -alias digiearth -keyalg RSA -keysize 2048 -validity 10000`
-2. In **Settings → Secrets and variables → Actions**, add four secrets:
-   `KEYSTORE_BASE64` (the output of `base64 -w0 digi-earth.jks`), `KEYSTORE_PASSWORD`, `KEY_ALIAS` (`digiearth`) and `KEY_PASSWORD`.
-3. The next build also produces `DigiEarth.aab`, the file you upload to the Play Console.
-4. Raise `versionCode` and `versionName` in `android/app/build.gradle` for every new upload.
+ Digi Earth Live `https://soorajacontec.github.io/digi-earth/`.
+ 
 
 ## Project structure
 
